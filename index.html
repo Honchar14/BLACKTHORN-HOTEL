@@ -1,0 +1,1158 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Blackthorn Coastal Hotel</title>
+<style>
+/* ==========================================================================
+   BLACKTHORN — first screen + preloader
+   Layout: 1920×1080 Figma frame. 1 design px = var(--u) (scales with width).
+   ========================================================================== */
+:root {
+  --u: calc(100vw / 1920);
+  --ink: #0e0d0d;          /* preloader ground, text, frame lines */
+  --paper: #f0efeb;        /* right half of the hero */
+  --light: #f0efeb;        /* everything that was white */
+  --font: Helvetica, "Helvetica Neue", Arial, sans-serif;
+  --line: max(1px, calc(2 * var(--u)));
+  --keyhole: none;         /* keyhole mask (data URI), set by JS */
+  color-scheme: light;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
+html { background: var(--ink); }
+body {
+  background: var(--ink);
+  color: var(--ink);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: geometricPrecision;
+}
+body.is-ready { background: var(--paper); }
+a { color: inherit; text-decoration: none; }
+img { display: block; }
+
+/* Shared small type: Helvetica 16, -4% tracking, uppercase, cap-trimmed like Figma */
+.est, .nav, .contact, .intro, .tagline, .book-label {
+  margin: 0;
+  font-size: calc(16 * var(--u));
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+/* Line mask: .m clips, .r moves (reveal), .roll rolls on hover */
+.m { display: block; }
+.roll-link .m { overflow: hidden; padding-block: 0.4em; margin-block: -0.4em; }   /* clip for the hover roll */
+.est, .intro { --rgb: 240 239 235; }
+.nav, .contact, .tagline, .book-label { --rgb: 14 13 13; }
+.r { display: block; }
+.m, .r, .roll, .roll::after { text-box: trim-both cap alphabetic; }
+
+/* ===================== PRELOADER ===================== */
+.pl-bg { position: fixed; inset: 0; z-index: 1; background: var(--ink); }
+.pl-grain { position: absolute; inset: 0; opacity: 0; background-repeat: repeat; image-rendering: pixelated; }
+
+.pl-fill, .pl-ui { position: fixed; z-index: 3; pointer-events: none; }
+.pl-ui { inset: 0; z-index: 4; color: var(--light); }
+
+.pl-keyhole, .pl-fill {
+  left: 50%; top: 50%;
+  width: calc(202 * var(--u)); height: calc(405 * var(--u));
+  transform: translate(-50%, -50%);
+}
+.pl-keyhole { position: absolute; }
+.pl-keyhole svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.pl-fill {
+  background: var(--light);
+  -webkit-mask: var(--keyhole) center / 100% 100% no-repeat;
+          mask: var(--keyhole) center / 100% 100% no-repeat;
+  clip-path: inset(100% 0 0 0);
+}
+
+.pl-logo {
+  position: absolute; right: calc(30 * var(--u)); top: calc(30 * var(--u));
+  width: calc(294 * var(--u)); height: calc(184.81 * var(--u));
+  color: var(--light);
+}
+
+.pl-counter {
+  position: absolute; left: calc(30 * var(--u)); bottom: calc(30 * var(--u));
+  display: flex;
+  font-size: calc(181 * var(--u)); line-height: 1; font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  text-box: trim-both cap alphabetic;
+}
+.pl-counter .m { overflow: hidden; padding-block: 0.06em; margin-block: -0.06em; }
+.book .m { overflow: hidden; padding-block: 0.4em; margin-block: -0.4em; }
+.pl-counter .d { display: block; text-box: trim-both cap alphabetic; will-change: transform; }
+
+.pl-direct {
+  position: absolute; left: calc(348 * var(--u) - var(--line) / 2); bottom: calc(30 * var(--u));
+  width: var(--line); height: calc(50 * var(--u));
+  background: var(--light);
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+.pl-ruler {
+  position: absolute; left: calc(348 * var(--u)); bottom: calc(30 * var(--u));
+  width: calc(1542.5 * var(--u)); height: calc(23.396 * var(--u));
+}
+.pl-ruler svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+/* ===================== HERO BACKGROUND ===================== */
+.hero-bg {
+  position: fixed; inset: 0; z-index: 2;
+  background: var(--paper);
+  opacity: 0;
+  will-change: clip-path;
+}
+
+.slider {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 50vw;
+  width: calc(round(down, calc(50vw - var(--line)), 1px) + 1px);   /* photo ends under the centre line */
+  overflow: hidden;
+  will-change: transform;
+}
+.slide { position: absolute; inset: 0; overflow: hidden; visibility: hidden; }
+.slide img { width: 100%; height: 100%; object-fit: cover; transform-origin: 50% 50%; }   /* no will-change: lets the browser re-raster crisply at rest */
+
+/* ===================== HERO UI ===================== */
+.hero-ui { position: fixed; inset: 0; z-index: 5; visibility: hidden; }
+.hero-ui.is-on { visibility: visible; }
+
+/* frame lines: static, part of the background layer revealed by the keyhole */
+.frame { position: absolute; inset: 0; pointer-events: none; }
+.frame .ln { position: absolute; background: var(--ink); }
+.ln.h { height: var(--line); left: 0; right: 0; }
+.ln.v { width: var(--line); top: 0; bottom: 0; }
+.ln-left   { left: 0; }
+.ln-top    { top: 0; }
+.ln-right  { right: 0; }
+.ln-bottom { bottom: 0; }
+.ln-mid    { left: calc(50vw - var(--line)); }
+/* snap the centre line to whole pixels so no sliver of photo shows between it and the paper */
+.ln.ln-mid { left: round(down, calc(50vw - var(--line)), 1px); width: round(up, var(--line), 1px); }
+
+.est { position: absolute; left: calc(30 * var(--u)); top: calc(30 * var(--u)); color: var(--light); line-height: 1; }
+
+.nav {
+  position: absolute; left: calc(1213 * var(--u)); top: calc(30 * var(--u));
+  width: calc(124 * var(--u));
+  display: flex; flex-direction: column; gap: calc(20 * var(--u));
+  line-height: 1;
+}
+
+/* Hover: text rolls up, a copy rolls in from below */
+.roll { display: block; position: relative; transition: transform .55s cubic-bezier(.76, 0, .24, 1); white-space: nowrap; }
+.roll::after { content: attr(data-text); position: absolute; left: 0; top: calc(100% + 0.5em); }
+.roll-link:hover .roll, .roll-link:focus-visible .roll { transform: translateY(calc(-100% - 0.5em)); }
+.roll-link:focus-visible { outline: none; }
+.roll-link:focus-visible .m { outline: 1px solid currentColor; outline-offset: 4px; }
+
+.contact {
+  position: absolute; right: calc(30 * var(--u)); top: calc(30 * var(--u));
+  height: calc(24 * var(--u));
+  display: flex; align-items: flex-start; gap: calc(10 * var(--u));   /* 10px between text and arrow, as in Figma */
+  line-height: 1;
+}
+.contact-arrow { width: calc(14 * var(--u)); height: calc(14 * var(--u)); margin-top: calc(-0.5 * var(--u)); transition: transform .5s cubic-bezier(.76, 0, .24, 1); }
+.contact:hover .contact-arrow, .contact:focus-visible .contact-arrow { transform: rotate(-90deg); }   /* ↘ turns to ↗ */
+.contact-line {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: max(1px, calc(1.5 * var(--u)));
+  background: currentColor;
+  transform-origin: 0 50%;
+}
+.contact:hover .contact-line.is-done { animation: line-swap .8s cubic-bezier(.76, 0, .24, 1); }
+@keyframes line-swap {
+  0%   { transform: scaleX(1); transform-origin: 100% 50%; }
+  45%  { transform: scaleX(0); transform-origin: 100% 50%; }
+  55%  { transform: scaleX(0); transform-origin: 0 50%; }
+  100% { transform: scaleX(1); transform-origin: 0 50%; }
+}
+
+.hero-logo {
+  --s: 0.8;                /* logo scale relative to the Figma frame (1174 × 738) */
+  position: absolute; left: 50%; top: 50%;
+  width: calc(1174 * var(--s) * var(--u)); height: calc(738 * var(--s) * var(--u));
+  transform: translate(-50%, -50%);
+  color: var(--ink);
+  pointer-events: none;
+}
+.logo svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+.tagline {
+  /* starts on the navigation's left edge (x 1213) and ends on the right contour of the N */
+  position: absolute; left: calc((253 + 587 * var(--s)) * var(--u)); top: calc(316.5 * var(--s) * var(--u));
+  width: calc((587 * var(--s) - 253) * var(--u));
+  display: flex; flex-direction: column; gap: calc(6.1 * var(--u));
+  color: var(--ink);
+  line-height: 1;
+}
+.tagline .m:last-child { text-align: right; }
+
+.intro {
+  position: absolute; left: calc(30 * var(--u)); bottom: calc(30 * var(--u));
+  display: flex; flex-direction: column; gap: calc(6.8 * var(--u));
+  color: var(--light);
+  line-height: 1;
+}
+.intro { gap: calc(6.1 * var(--u)); }
+
+.pager {
+  position: absolute; left: calc(659 * var(--u)); bottom: calc(30 * var(--u));
+  display: flex; gap: calc(15 * var(--u));
+}
+.pager .bar {
+  position: relative; display: block;
+  width: calc(80 * var(--u)); height: var(--line);
+  background: rgb(240 239 235 / .5);
+  transform-origin: 0 50%;
+  overflow: hidden;
+}
+.pager .bar b {
+  position: absolute; inset: 0;
+  background: var(--light);
+  transform: scaleX(0); transform-origin: 0 50%;
+}
+
+/* Book your stay: ring draws in; on hover a dark disc fills from the centre,
+   the label rolls letter by letter and the whole button leans toward the cursor */
+.book {
+  position: absolute; right: calc(30 * var(--u)); bottom: calc(30 * var(--u));
+  width: calc(250 * var(--u)); height: calc(250 * var(--u));
+  display: grid; place-items: center;
+  border-radius: 50%;
+  color: var(--ink);
+  will-change: transform;
+}
+.book-ring { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.book-disc {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: var(--ink);
+  transform: scale(0);
+  transition: transform .75s cubic-bezier(.19, 1, .22, 1);
+}
+.book:hover .book-disc, .book:focus-visible .book-disc { transform: scale(1); }
+.book-label {
+  position: relative;
+  font-size: calc(20 * var(--u));
+  line-height: 1;
+  transition: color .35s ease;
+  will-change: transform;
+}
+.book:hover .book-label, .book:focus-visible .book-label { color: var(--paper); }
+.book:focus-visible { outline: none; }
+.book .ch { display: inline-block; position: relative; transition: transform .6s cubic-bezier(.76, 0, .24, 1); transition-delay: calc(var(--i) * 18ms); white-space: pre; }
+.book .ch::after { content: attr(data-c); position: absolute; left: 0; top: calc(100% + 0.5em); }
+.book .ch, .book .ch::after { text-box: trim-both cap alphabetic; }
+.book:hover .ch, .book:focus-visible .ch { transform: translateY(calc(-100% - 0.5em)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .roll, .book .ch, .book-disc, .contact-arrow { transition-duration: .01ms !important; }
+}
+
+/* ===================== CURSOR =====================
+   Dot + hairline ring that trails it. Light on photo / preloader, ink on paper.
+   Links: ring opens up. Book your stay: ring turns into a small keyhole. */
+.cursor { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  html.has-cursor, html.has-cursor * { cursor: none !important; }
+  .cursor { display: block; position: fixed; inset: 0; z-index: 100; pointer-events: none; color: var(--light); transition: color .35s ease, opacity .3s ease; }
+  .cursor.is-ink { color: var(--ink); }
+  .cursor.is-hidden { opacity: 0; }
+  .cursor-dot, .cursor-ring { position: absolute; left: 0; top: 0; will-change: transform; }
+  .cursor-dot {
+    width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%;
+    background: currentColor;
+    transition: width .35s cubic-bezier(.22, 1, .36, 1), height .35s cubic-bezier(.22, 1, .36, 1), margin .35s cubic-bezier(.22, 1, .36, 1), opacity .25s;
+  }
+  .cursor-ring { width: 48px; height: 48px; margin: -24px 0 0 -24px; }
+  .cursor-ring svg { display: block; width: 100%; height: 100%; overflow: visible; }
+  .cr-circle, .cr-key { transform-box: fill-box; transform-origin: 50% 50%; transition: transform .55s cubic-bezier(.22, 1, .36, 1), opacity .35s ease, stroke-width .35s; }
+  .cr-key { opacity: 0; transform: scale(0.2); }
+  .cursor.is-link .cr-circle { transform: scale(1.55); stroke-width: .7; }
+  .cursor.is-link .cursor-dot { opacity: 0; }
+  .cursor.is-book .cr-circle { transform: scale(0.2); opacity: 0; }
+  .cursor.is-book .cr-key { opacity: 1; transform: scale(1.25); }
+  .cursor.is-book .cursor-dot { opacity: 0; }
+  .cursor.is-book { color: var(--light); }
+  .cursor.is-down .cr-circle { transform: scale(0.8); }
+  .cursor.is-down.is-link .cr-circle { transform: scale(1.3); }
+}
+
+/* Navigation: hairline underline like CONTACT — draws in from the left on hover, leaves to the right */
+.nav .roll-link { position: relative; align-self: flex-start; }
+.nav .roll-link::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: calc(-7 * var(--u));
+  height: max(1px, calc(1.5 * var(--u)));
+  background: var(--ink);
+  transform: scaleX(0); transform-origin: 100% 50%;
+  transition: transform .55s cubic-bezier(.76, 0, .24, 1);
+}
+.nav .roll-link:hover::after, .nav .roll-link:focus-visible::after { transform: scaleX(1); transform-origin: 0 50%; }
+
+
+/* soft, blurred inner edge of the keyhole while it grows (drawn by js/main.js) */
+.key-vignette { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 6; pointer-events: none; display: none; }
+
+/* Feathered roll mask (like After Effects "Feather"): instead of a hard clip line, the text
+   dissolves softly at the top edge and materialises softly at the bottom while it rolls.
+   The feather lives in the 0.4em padding around the text, so the text at rest stays fully crisp. */
+.roll-link .m, .book .m {
+  --feather: 0.38em;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--feather), #000 calc(100% - var(--feather)), transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0, #000 var(--feather), #000 calc(100% - var(--feather)), transparent 100%);
+}
+
+</style>
+<script>document.body.classList.add("is-loading")</script>
+
+
+<!-- ============ PRELOADER: dark ground with grain ============ -->
+<div class="pl-bg" aria-hidden="true">
+  <div class="pl-grain" id="grain"></div>
+</div>
+
+<!-- ============ HERO BACKGROUND (seen through the keyhole first) ============ -->
+<div class="hero-bg" id="heroBg" aria-hidden="true">
+  <div class="slider" id="slider">
+    <div class="slide"><img src="images/slide-1.jpg" alt="" decoding="async"></div>
+    <div class="slide"><img src="images/slide-2.jpg" alt="" decoding="async"></div>
+    <div class="slide"><img src="images/slide-3.jpg" alt="" decoding="async"></div>
+  </div>
+  <!-- frame lines are part of the picture behind the keyhole -->
+  <div class="frame" aria-hidden="true">
+    <i class="ln v ln-left"></i><i class="ln h ln-top"></i><i class="ln v ln-right"></i><i class="ln h ln-bottom"></i><i class="ln v ln-mid"></i>
+  </div>
+</div>
+
+<!-- soft, out-of-focus edge inside the keyhole while it opens -->
+<canvas class="key-vignette" id="keyVignette" aria-hidden="true"></canvas>
+
+<!-- ============ PRELOADER UI ============ -->
+<div class="pl-fill" id="plFill" aria-hidden="true"></div>
+<div class="pl-ui" id="plUi" aria-hidden="true">
+  <div class="pl-keyhole" id="plKeyhole"><svg width="202" height="405" viewBox="0 0 202 405" fill="none" xmlns="http://www.w3.org/2000/svg"><mask id="stroke0_214_2784" fill="white"><path d="M202 101.132C202 83.0026 197.134 65.2067 187.909 49.6069C178.685 34.0071 165.442 21.1769 149.567 12.4594C133.692 3.74185 115.768 -0.542453 97.6719 0.0549307C79.5759 0.652315 61.9729 6.10941 46.7057 15.855C31.4385 25.6006 19.0684 39.2763 10.8902 55.4506C2.71202 71.625 -0.973469 89.7031 0.219508 107.793C1.41248 125.882 7.44006 143.318 17.6713 158.276C27.9025 173.233 41.9612 185.161 58.3757 192.812L11.4231 404.918L110.04 405L190.536 404.918L143.665 192.812C161.096 184.676 175.846 171.726 186.179 155.486C196.513 139.245 202.002 120.388 202 101.132Z"/></mask><path d="M202 101.132C202 83.0026 197.134 65.2067 187.909 49.6069C178.685 34.0071 165.442 21.1769 149.567 12.4594C133.692 3.74185 115.768 -0.542453 97.6719 0.0549307C79.5759 0.652315 61.9729 6.10941 46.7057 15.855C31.4385 25.6006 19.0684 39.2763 10.8902 55.4506C2.71202 71.625 -0.973469 89.7031 0.219508 107.793C1.41248 125.882 7.44006 143.318 17.6713 158.276C27.9025 173.233 41.9612 185.161 58.3757 192.812L11.4231 404.918L110.04 405L190.536 404.918L143.665 192.812C161.097 184.676 175.846 171.726 186.179 155.486C196.513 139.245 202.002 120.388 202 101.132Z" stroke-width="4" stroke="#F0EFEB" mask="url(#stroke0_214_2784)"/></svg></div>
+  <div class="pl-logo logo" id="plLogo"></div>
+  <div class="pl-counter" id="plCounter"><span class="m"><span class="d">0</span></span><span class="m"><span class="d">0</span></span><span class="m"><span class="d">0</span></span></div>
+  <div class="pl-direct" id="plDirect"></div>
+  <div class="pl-ruler" id="plRuler"><svg width="1543" height="24" viewBox="0 0 1543 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.25 1.09278e-08L0.249999 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M154.45 1.09278e-08L154.45 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.5"/><path d="M14.0748 11.6979L14.0748 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M27.8997 11.6979L27.8997 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M42.788 11.6979L42.788 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M56.6128 11.6979L56.6128 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M70.4376 11.6979L70.4376 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M84.2625 11.6979L84.2625 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M98.0872 11.6979L98.0872 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M111.912 11.6979L111.912 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M126.8 11.6979L126.8 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M140.625 11.6979L140.625 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M308.65 1.09278e-08L308.65 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.5"/><path d="M168.275 11.6979L168.275 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M182.1 11.6979L182.1 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M196.988 11.6979L196.988 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M210.813 11.6979L210.813 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M224.638 11.6979L224.638 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M238.462 11.6979L238.462 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M252.287 11.6979L252.287 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M266.112 11.6979L266.112 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M281 11.6979L281 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M294.825 11.6979L294.825 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M462.85 1.09278e-08L462.85 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.5"/><path d="M322.475 11.6979L322.475 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M336.3 11.6979L336.3 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M351.188 11.6979L351.188 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M365.013 11.6979L365.013 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M378.838 11.6979L378.838 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M392.662 11.6979L392.662 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M406.487 11.6979L406.487 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M420.312 11.6979L420.312 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M435.2 11.6979L435.2 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M449.025 11.6979L449.025 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M617.05 1.09278e-08L617.05 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.5"/><path d="M476.675 11.6979L476.675 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M490.5 11.6979L490.5 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M505.388 11.6979L505.388 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M519.213 11.6979L519.213 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M533.038 11.6979L533.038 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M546.862 11.6979L546.862 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M560.687 11.6979L560.687 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M574.512 11.6979L574.512 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M589.4 11.6979L589.4 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M603.225 11.6979L603.225 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M771.25 1.09278e-08L771.25 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.5"/><path d="M630.875 11.6979L630.875 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M644.7 11.6979L644.7 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M659.588 11.6979L659.588 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M673.413 11.6979L673.413 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M687.237 11.6979L687.237 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M701.062 11.6979L701.062 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M714.887 11.6979L714.887 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M728.712 11.6979L728.712 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M743.6 11.6979L743.6 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M757.425 11.6979L757.425 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M925.45 1.09278e-08L925.45 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.5"/><path d="M785.075 11.6979L785.075 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M798.9 11.6979L798.9 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M813.788 11.6979L813.788 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M827.613 11.6979L827.613 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M841.438 11.6979L841.438 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M855.263 11.6979L855.263 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M869.087 11.6979L869.087 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M882.912 11.6979L882.912 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M897.8 11.6979L897.8 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M911.625 11.6979L911.625 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1079.65 1.09278e-08L1079.65 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.5"/><path d="M939.275 11.6979L939.275 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M953.1 11.6979L953.1 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M967.988 11.6979L967.988 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M981.813 11.6979L981.813 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M995.638 11.6979L995.638 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1009.46 11.6979L1009.46 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1023.29 11.6979L1023.29 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1037.11 11.6979L1037.11 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1052 11.6979L1052 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1065.83 11.6979L1065.83 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1233.85 1.09278e-08L1233.85 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.5"/><path d="M1093.47 11.6979L1093.47 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1107.3 11.6979L1107.3 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1122.19 11.6979L1122.19 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1136.01 11.6979L1136.01 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1149.84 11.6979L1149.84 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1163.66 11.6979L1163.66 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1177.49 11.6979L1177.49 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1191.31 11.6979L1191.31 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1206.2 11.6979L1206.2 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1220.03 11.6979L1220.03 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1388.05 1.09278e-08L1388.05 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.5"/><path d="M1247.67 11.6979L1247.67 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1261.5 11.6979L1261.5 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1276.39 11.6979L1276.39 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1290.21 11.6979L1290.21 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1304.04 11.6979L1304.04 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1317.86 11.6979L1317.86 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1331.69 11.6979L1331.69 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1345.51 11.6979L1345.51 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1360.4 11.6979L1360.4 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1374.23 11.6979L1374.23 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1542.25 1.09278e-08L1542.25 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.5"/><path d="M1401.87 11.6979L1401.87 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1415.7 11.6979L1415.7 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1430.59 11.6979L1430.59 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1444.41 11.6979L1444.41 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1458.24 11.6979L1458.24 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1472.06 11.6979L1472.06 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1485.89 11.6979L1485.89 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1499.71 11.6979L1499.71 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1514.6 11.6979L1514.6 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/><path d="M1528.43 11.6979L1528.43 23.3959" stroke-width="0.5" stroke="#F0EFEB" stroke-opacity="0.25"/></svg></div>
+</div>
+
+<!-- ============ HERO UI ============ -->
+<header class="hero-ui" id="heroUi">
+
+  <p class="est"><span class="m"><span class="r">Est. 1998</span></span></p>
+
+  <nav class="nav" aria-label="Main">
+    <a href="#rooms" class="roll-link"><span class="m"><span class="r"><span class="roll" data-text="Room &amp; suits">Room &amp; suits</span></span></span></a>
+    <a href="#experiences" class="roll-link"><span class="m"><span class="r"><span class="roll" data-text="Experiences">Experiences</span></span></span></a>
+    <a href="#story" class="roll-link"><span class="m"><span class="r"><span class="roll" data-text="Our story">Our story</span></span></span></a>
+    <a href="#about" class="roll-link"><span class="m"><span class="r"><span class="roll" data-text="About us">About us</span></span></span></a>
+  </nav>
+
+  <a href="#contact" class="contact roll-link">
+    <span class="m"><span class="r"><span class="roll" data-text="Contact">Contact</span></span></span>
+    <svg class="contact-arrow" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 2L12 12M12 3.5V12H3.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+    <i class="contact-line"></i>
+  </a>
+
+  <div class="hero-logo logo" id="heroLogo" role="img" aria-label="The Blackthorn Coastal">
+    <p class="tagline" aria-hidden="true"><span class="m"><span class="r">quiet beauty of a world</span></span><span class="m"><span class="r">forgotten by time.</span></span></p>
+  </div>
+
+  <p class="intro">
+    <span class="m"><span class="r">Some places are meant</span></span>
+    <span class="m"><span class="r">to be kept secret</span></span>
+    <span class="m"><span class="r">Hidden along the Atlantic coast.</span></span>
+    <span class="m"><span class="r">where timeless elegance</span></span>
+    <span class="m"><span class="r">meets the quiet beauty</span></span>
+    <span class="m"><span class="r">of a world forgotten by time.</span></span>
+  </p>
+
+  <div class="pager" id="pager" aria-hidden="true">
+    <i class="bar"><b></b></i><i class="bar"><b></b></i><i class="bar"><b></b></i>
+  </div>
+
+  <a href="#book" class="book" id="book">
+    <svg class="book-ring" viewBox="0 0 250 250" aria-hidden="true"><defs><linearGradient id="bookRing" gradientUnits="userSpaceOnUse" x1="40" y1="30.8" x2="201.8" y2="197.5"><stop offset="0" stop-color="#000"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient></defs><path class="ring" d="M37.32 37.32A124 124 0 0 1 212.68 212.68" fill="none" stroke="url(#bookRing)" stroke-width="2"/><path class="ring" d="M37.32 37.32A124 124 0 0 0 212.68 212.68" fill="none" stroke="url(#bookRing)" stroke-width="2"/></svg>
+    <span class="book-disc" aria-hidden="true"></span>
+    <span class="book-label"><span class="m"><span class="r" id="bookLabel">Book your stay</span></span></span>
+  </a>
+</header>
+
+<!-- ============ CURSOR ============ -->
+<div class="cursor" id="cursor" aria-hidden="true">
+  <div class="cursor-ring"><svg viewBox="-24 -24 48 48">
+    <circle class="cr-circle" r="17" fill="none" stroke="currentColor" stroke-width="1"/>
+    <g class="cr-key"><path transform="translate(-5.05 -10.125) scale(0.05)" d="M202 101.132C202 83.0026 197.134 65.2067 187.909 49.6069C178.685 34.0071 165.442 21.1769 149.567 12.4594C133.692 3.74185 115.768 -0.542453 97.6719 0.0549307C79.5759 0.652315 61.9729 6.10941 46.7057 15.855C31.4385 25.6006 19.0684 39.2763 10.8902 55.4506C2.71202 71.625 -0.973469 89.7031 0.219508 107.793C1.41248 125.882 7.44006 143.318 17.6713 158.276C27.9025 173.233 41.9612 185.161 58.3757 192.812L11.4231 404.918L110.04 405L190.536 404.918L143.665 192.812C161.097 184.676 175.846 171.726 186.179 155.486C196.513 139.245 202.002 120.388 202 101.132Z" fill="currentColor"/></g>
+  </svg></div>
+  <div class="cursor-dot"></div>
+</div>
+
+
+<script>
+/* BLACKTHORN logo: BLACK/THORN (cut + uncut), knockout zones, pen paths for the handwriting reveal.
+   Script letters are clean fills only (the "(Stroke)" outline layers from Figma are left out). */
+window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 161.7 240.62 174.4 258.56C181.85 269.16 185.58 281.38 185.58 295.24C185.58 311.43 180.98 324.71 171.77 335.07C167 340.54 160.12 345.55 151.15 350.09C164.32 355.1 174.16 360.75 180.69 367.04C192.22 378.22 197.99 393.65 197.99 413.33C197.99 429.87 192.8 444.83 182.43 458.22C166.94 478.25 142.3 488.27 108.52 488.27L0 488.27L0 231.66L110.26 231.66ZM34.08 458.57L109.04 458.57C130.36 458.57 145.56 452.4 154.65 440.06C160.36 432.25 163.21 422.82 163.21 411.76C163.21 393.12 154.88 380.43 138.22 373.68C129.37 370.07 117.66 368.26 103.1 368.26L34.08 368.26L34.08 458.57ZM34.08 340.14L97.33 340.14C112.01 340.14 123.43 338.1 131.58 334.02C144.4 327.62 150.81 316.09 150.81 299.44C150.81 282.67 143.99 271.37 130.36 265.55C122.67 262.29 111.25 260.65 96.11 260.65L34.08 260.65L34.08 340.14Z","full":"M97.30 340.14C111.97 340.14 123.38 338.10 131.54 334.02C144.35 327.62 150.75 316.09 150.75 299.44C150.75 282.67 143.94 271.37 130.31 265.55C122.63 262.29 111.21 260.66 96.08 260.66L34.06 260.66L34.06 340.14L97.30 340.14ZM109.00 458.57C130.31 458.57 145.51 452.40 154.59 440.06C160.30 432.25 163.15 422.82 163.15 411.76C163.15 393.12 154.83 380.43 138.17 373.68C129.32 370.07 117.62 368.26 103.06 368.26L34.06 368.26L34.06 458.57L109.00 458.57ZM0.00 231.66L110.22 231.66C140.27 231.66 161.64 240.63 174.33 258.56C181.79 269.16 185.51 281.39 185.51 295.24C185.51 311.43 180.91 324.71 171.71 335.07C166.94 340.54 160.07 345.55 151.10 350.09C164.26 355.10 174.10 360.75 180.62 367.04C192.15 378.22 197.92 393.65 197.92 413.33C197.92 429.87 192.73 444.83 182.37 458.22C166.88 478.25 142.25 488.27 108.48 488.27L0.00 488.27L0.00 231.66Z"},{"cut":"M238.56 457.7L356.7 457.7L410.44 315C422.46 314.39 434.43 311.68 446.29 307.26L418.58 383.11L498.97 383.11L469.23 296.6C478.9 291.26 488.46 284.94 497.91 277.86L574.28 488.27L536.19 488.27L510.15 411.41L408.62 411.41L380.84 488.27L345.19 488.27L203.79 488.27L203.79 231.66L238.56 231.66L238.56 457.7Z","full":"M203.72 231.66L238.48 231.66L238.48 457.70L368.44 457.70L368.44 488.27L203.72 488.27L203.72 231.66ZM498.79 383.11L459.83 269.74L418.44 383.11L498.79 383.11ZM441.67 231.66L480.97 231.66L574.08 488.27L536.00 488.27L509.97 411.41L408.48 411.41L380.70 488.27L345.07 488.27L441.67 231.66Z"},{"cut":"M634.58 231.66C632.93 233.86 631.37 236.07 629.95 238.28C624.87 246.16 621.14 254.41 621.14 262.36C621.14 266.87 622.4 270.89 624.96 273.93C622.29 276.28 619.74 278.84 617.3 281.62C601.81 299.32 594.06 326.51 594.06 363.2C594.06 393.24 601.05 417.64 615.03 436.39C629.13 455.02 650.1 464.34 677.94 464.34C703.57 464.34 723.08 454.5 736.48 434.81C743.59 424.45 748.89 410.82 752.38 393.94L786.28 393.94C783.25 420.96 773.23 443.61 756.23 461.89C735.84 483.9 708.35 494.91 673.75 494.91C643.92 494.91 618.88 485.88 598.61 467.83C571.93 443.96 558.59 407.1 558.59 357.26C558.59 319.41 568.61 288.37 588.64 264.15C601.2 248.9 616.51 238.07 634.58 231.66ZM758.56 254.99C773.61 270.96 782.03 288.86 783.84 308.69L749.93 308.69C746.52 294.02 740.08 282.05 730.62 272.79C736.16 270.26 741.59 267.11 746.8 263.63C750.84 260.94 754.78 258.01 758.56 254.99ZM721.02 230.91C733.1 234.93 743.52 240.89 752.28 248.8C749.11 251.32 745.81 253.76 742.42 256.03C736.03 260.32 729.45 263.93 722.91 266.36C717.34 262.52 710.83 259.63 703.39 257.72C704.35 255.59 705.58 253.25 707.06 250.75C710.6 244.75 715.44 237.95 721.02 230.91ZM688.27 247.12C688.38 246.76 688.49 246.41 688.61 246.06L688.27 247.12Z","full":"M678.05 224.67C710.54 224.67 735.75 233.23 753.69 250.35C771.62 267.47 781.58 286.92 783.56 308.69L749.67 308.69C745.83 292.16 738.14 279.06 726.61 269.39C715.20 259.72 699.13 254.89 678.40 254.89C653.13 254.89 632.69 263.80 617.08 281.62C601.60 299.32 593.85 326.51 593.85 363.20C593.85 393.24 600.84 417.64 614.81 436.39C628.90 455.02 649.87 464.34 677.70 464.34C703.32 464.34 722.83 454.50 736.22 434.82C743.32 424.45 748.62 410.83 752.11 393.94L786.00 393.94C782.97 420.96 772.96 443.61 755.96 461.89C735.58 483.90 708.09 494.91 673.51 494.91C643.69 494.91 618.66 485.88 598.39 467.83C571.73 443.96 558.39 407.10 558.39 357.26C558.39 319.41 568.41 288.37 588.44 264.15C610.10 237.83 639.97 224.67 678.05 224.67Z"},{"cut":"M826.86 356.73L951.97 231.66L1000.03 231.66L893.26 335.07L1003 488.27L957.74 488.27L867.92 359.53L826.86 398.83L826.86 488.27L792.96 488.27L792.96 231.66L826.86 231.66L826.86 356.73Z","full":"M792.68 231.66L826.56 231.66L826.56 356.73L951.64 231.66L999.67 231.66L892.94 335.07L1002.64 488.27L957.40 488.27L867.61 359.53L826.56 398.83L826.86 488.27L792.87 488.27L792.68 231.66Z"}],"thorn":[{"cut":"M826.86 483.89L826.86 650.27C815.01 653.49 803.28 657.4 791.76 661.92L791.76 620.44L658.34 620.44L658.34 740.4L623.24 740.4L623.24 514.45L539.72 514.45L539.72 740.4L504.45 740.4L504.45 514.45L418 514.45L418 483.89L658.34 483.89L658.34 589.88L793 589.88L793 483.74L826.86 483.89Z","full":"M626.14 483.89L626.14 514.45L539.71 514.45L539.71 740.40L504.43 740.40L504.43 514.45L418.00 514.45L418.00 483.89L626.14 483.89ZM623.20 483.89L658.30 483.89L658.30 589.88L793.09 589.88L793.09 483.82L827.06 483.82L827.06 740.40L791.71 740.40L791.71 620.44L658.30 620.44L658.30 740.40L623.20 740.40L623.20 483.89Z"},{"cut":"M955.78 476.91C1001.07 476.91 1034.6 491.46 1056.38 520.56C1073.37 543.26 1081.87 572.3 1081.87 607.69C1081.87 645.99 1072.15 677.83 1052.71 703.21C1029.89 733.01 997.35 747.91 955.09 747.91C921.96 747.91 894.79 738.72 873.55 720.36C883.62 716.83 892.91 712.85 901.01 708.3C903.25 707.05 905.41 705.74 907.48 704.38C920.95 712.68 938.21 716.83 959.28 716.83C989.9 716.83 1012.02 705.88 1025.64 684C1039.38 662 1046.25 636.74 1046.25 608.22C1046.25 578.07 1038.33 553.8 1022.5 535.4C1006.78 517.01 985.24 507.81 957.88 507.81C931.33 507.81 909.68 516.95 892.91 535.23C876.15 553.39 867.76 580.22 867.76 615.73C867.77 624.88 868.51 633.57 870 641.8C858.22 643.21 846.49 645.37 834.87 648.2C832.82 637.3 831.79 625.71 831.79 613.46C831.79 578.77 840.41 549.08 857.64 524.4C879.76 492.74 912.47 476.91 955.78 476.91ZM872.76 653.71C876.33 666.22 881.83 677.53 889.25 687.67C892.29 691.77 895.74 695.44 899.58 698.68C898.39 699.39 897.17 700.1 895.9 700.8C887.31 705.52 877.19 709.65 866.09 713.27C864.7 711.83 863.34 710.33 862 708.79C851.32 695.46 843.48 680.26 838.46 663.2C850.35 659.14 861.88 655.94 872.76 653.71ZM835.5 651.37L835.5 651.37C835.88 651.28 836.25 651.19 836.63 651.1C836.25 651.19 835.88 651.28 835.5 651.37ZM836.85 651.04C837.31 650.93 837.77 650.82 838.23 650.72C838.47 650.66 838.71 650.6 838.95 650.55C838.25 650.71 837.55 650.88 836.85 651.04ZM839.6 650.4C839.82 650.35 840.05 650.29 840.28 650.24C840.6 650.17 840.93 650.1 841.26 650.02C840.7 650.15 840.15 650.27 839.6 650.4ZM842.05 649.84C842.82 649.67 843.6 649.5 844.38 649.34C843.6 649.5 842.82 649.67 842.05 649.84Z","full":"M955.70 476.91C1000.99 476.91 1034.51 491.46 1056.28 520.56C1073.27 543.26 1081.77 572.31 1081.77 607.69C1081.77 645.99 1072.05 677.83 1052.61 703.21C1029.80 733.01 997.26 747.91 955.00 747.91C915.54 747.91 884.52 734.87 861.94 708.79C841.80 683.65 831.73 651.87 831.73 613.46C831.73 578.77 840.34 549.08 857.57 524.40C879.69 492.74 912.40 476.91 955.70 476.91ZM959.19 716.83C989.81 716.83 1011.93 705.88 1025.55 684.00C1039.28 662.00 1046.15 636.74 1046.15 608.22C1046.15 578.07 1038.24 553.80 1022.40 535.40C1006.69 517.01 985.15 507.81 957.80 507.81C931.26 507.81 909.60 516.95 892.84 535.23C876.08 553.39 867.70 580.22 867.70 615.73C867.70 644.13 874.86 668.11 889.17 687.67C903.61 707.11 926.95 716.83 959.19 716.83Z"},{"cut":"M1210.62 483.89C1230.18 483.89 1246.3 486.74 1258.99 492.45C1283.09 503.39 1295.14 523.59 1295.14 553.04C1295.14 568.4 1291.94 580.98 1285.54 590.75C1279.25 600.53 1270.4 608.39 1258.99 614.33C1269 618.4 1276.51 623.76 1281.52 630.39C1286.64 637.03 1289.5 647.8 1290.08 662.7L1291.3 697.1C1291.65 706.87 1292.46 714.15 1293.74 718.92C1295.84 727.07 1299.57 732.31 1304.92 734.64L1304.92 740.4L1262.31 740.4C1261.15 738.19 1260.21 735.33 1259.52 731.84C1258.82 728.35 1258.24 721.6 1257.77 711.59L1255.67 668.81C1254.86 652.04 1248.63 640.81 1236.99 635.11C1230.35 631.96 1219.93 630.39 1205.73 630.39L1126.62 630.39L1126.62 740.4L1091.86 740.4L1091.86 483.89L1210.62 483.89ZM1126.62 601.41L1206.95 601.41C1223.25 601.41 1236.11 598.15 1245.54 591.63C1255.09 585.11 1259.86 573.35 1259.86 556.36C1259.86 538.08 1253.23 525.62 1239.96 518.99C1232.85 515.5 1223.37 513.75 1211.49 513.75L1126.62 513.75L1126.62 601.41Z","full":"M1206.83 601.41C1223.13 601.41 1235.99 598.15 1245.42 591.63C1254.97 585.11 1259.74 573.35 1259.74 556.36C1259.74 538.08 1253.10 525.63 1239.83 518.99C1232.73 515.50 1223.24 513.75 1211.37 513.75L1126.51 513.75L1126.51 601.41L1206.83 601.41ZM1091.76 483.89L1210.50 483.89C1230.05 483.89 1246.18 486.75 1258.86 492.45C1282.96 503.39 1295.01 523.59 1295.01 553.04C1295.01 568.41 1291.81 580.98 1285.41 590.76C1279.12 600.53 1270.27 608.39 1258.86 614.33C1268.88 618.40 1276.38 623.76 1281.39 630.39C1286.51 637.03 1289.36 647.80 1289.95 662.70L1291.17 697.10C1291.52 706.87 1292.33 714.15 1293.61 718.92C1295.71 727.07 1299.43 732.31 1304.79 734.64L1304.79 740.40L1262.18 740.40C1261.02 738.19 1260.09 735.34 1259.39 731.84C1258.69 728.35 1258.11 721.60 1257.64 711.59L1255.55 668.81C1254.73 652.04 1248.50 640.81 1236.86 635.11C1230.23 631.96 1219.81 630.39 1205.61 630.39L1126.51 630.39L1126.51 740.40L1091.76 740.40L1091.76 483.89Z"},{"cut":"M1480.99 691.68L1480.99 483.89L1514 483.89L1514 740.4L1475.06 740.4L1343.55 532.78L1343.55 740.4L1310.37 740.4L1310.37 483.89L1351.41 483.89L1480.99 691.68Z","full":"M1310.24 483.89L1351.27 483.89L1480.83 691.68L1480.83 483.89L1513.83 483.89L1513.83 740.40L1474.90 740.40L1343.41 532.78L1343.41 740.40L1310.24 740.40L1310.24 483.89Z"}],"the":{"fills":["M775.857 231.579L787.477 219.389H790.932L778.998 231.891C760.782 250.645 731.574 275.65 705.508 275.65C693.887 275.65 686.664 269.086 686.664 257.834C686.664 252.208 688.234 246.269 691.061 240.018C670.961 260.022 650.233 275.962 637.671 275.962C629.505 275.962 624.48 270.649 624.48 262.21C624.48 234.079 677.556 196.259 677.87 181.256C677.87 177.818 675.672 175.317 669.705 175.317C653.688 175.317 626.679 199.385 604.066 222.514L559.784 275.65H536.858C597.471 210.949 658.713 124.057 708.334 74.672C724.037 59.0439 737.856 47.479 748.848 39.665C743.509 38.1021 738.17 36.2268 733.145 34.3514C665.936 47.7916 535.915 311.907 405.267 311.907C359.1 311.907 339 282.526 339 248.457C339 223.139 350.62 195.009 371.348 174.692C372.29 174.067 372.918 173.754 373.233 173.754C373.547 173.754 373.861 174.067 373.861 174.692C373.861 175.005 373.861 175.63 373.547 176.255C362.24 194.384 354.389 220.639 354.389 245.019C354.389 278.463 369.778 308.469 411.234 308.469C510.162 308.469 628.563 51.8549 727.178 32.476C715.872 28.4127 648.035 3.72023 596.843 3.72023C500.113 3.72023 436.987 82.1735 436.987 124.682C436.987 142.498 449.235 152.188 466.508 152.188C493.517 152.188 519.584 129.37 537.172 110.929L548.792 98.7393H552.246L540.312 111.242C522.411 130.308 493.831 155.313 464.938 155.313C434.788 155.313 420.97 139.998 420.97 119.368C420.97 73.7343 488.178 0.907166 596.215 0.907166H596.843C655.572 0.907166 713.987 18.4107 770.204 26.8499C776.171 24.0368 780.882 23.0991 784.023 23.0991C787.163 23.0991 788.733 24.0368 788.733 25.9122C788.733 26.8499 788.419 27.7876 787.477 29.0378C800.04 30.6006 812.602 31.2258 824.85 31.2258C834.9 31.2258 851.231 28.4127 851.231 16.8479C851.231 15.2851 850.917 13.7222 850.289 11.8469C850.289 10.9092 850.917 10.2841 851.545 10.2841C852.173 10.2841 852.487 10.5966 852.802 11.2217C854.686 14.9725 855 18.7233 855 22.1614C855 38.4147 839.297 50.2921 816.371 50.2921C800.354 50.2921 783.08 47.7916 766.749 44.0408C754.187 52.7926 739.74 64.9826 728.12 76.2348C690.119 113.43 651.489 166.253 625.422 196.884H626.679C642.382 182.819 657.456 173.129 670.019 173.129C681.953 173.129 686.664 179.693 686.664 188.757C686.35 219.076 634.53 252.833 634.53 270.024C634.53 272.212 635.472 273.462 638.299 273.462C650.861 273.462 673.473 254.396 695.458 232.204C713.673 202.823 755.757 173.442 783.08 173.442C790.304 173.442 792.816 177.505 792.816 182.506C792.502 203.135 749.476 229.391 731.26 229.391C727.492 229.391 723.723 228.453 720.582 226.265C707.706 242.206 697.97 257.521 697.97 265.96C697.97 270.336 700.483 272.837 706.136 272.837C731.575 272.837 759.526 248.457 775.857 231.579ZM783.08 176.255C770.518 176.255 742.567 200.322 722.153 224.39C724.979 226.265 728.12 226.89 731.26 226.89C748.22 226.89 789.362 202.198 789.362 182.506C789.362 178.755 787.477 176.255 783.08 176.255Z"],"letters":[[[{"d":"M552.0 98.7L550.0 99.3L548.5 100.4L534.5 115.2","w":5.2},{"d":"M534.5 115.2L527.2 122.2L516.5 131.4","w":5.2},{"d":"M516.5 131.4L506.8 138.7L496.5 144.8","w":4.9},{"d":"M496.5 144.8L485.5 149.7L478.8 151.8L473.8 152.7","w":5.4},{"d":"M473.8 152.7L468.5 153.4L462.8 153.4L456.8 152.8L450.0 151.1","w":7.8},{"d":"M450.0 151.1L445.8 149.4L440.5 146.1L435.5 140.9L432.6 135.7","w":14.8},{"d":"M432.6 135.7L430.6 129.4L429.2 119.9L430.1 111.9","w":19.2},{"d":"M430.1 111.9L431.8 104.7L433.7 99.2L438.1 89.4","w":19.4},{"d":"M438.1 89.4L444.9 77.9L451.3 69.2","w":19.0},{"d":"M451.3 69.2L461.5 57.4L467.8 51.4","w":17.6},{"d":"M467.8 51.4L478.0 42.5L486.5 36.2","w":15.5},{"d":"M486.5 36.2L497.5 29.0L507.0 23.7","w":13.1},{"d":"M507.0 23.7L514.2 20.1L529.0 14.0","w":10.7},{"d":"M529.0 14.0L540.2 10.2L552.0 7.1","w":8.6},{"d":"M552.0 7.1L566.5 4.3L575.8 3.2","w":6.9},{"d":"M575.8 3.2L591.0 2.2L599.8 2.2","w":5.8},{"d":"M599.8 2.2L613.8 2.7L623.8 3.7","w":5.9},{"d":"M623.8 3.7L647.5 6.9","w":7.4},{"d":"M647.5 6.9L671.2 11.4","w":9.0},{"d":"M671.2 11.4L694.8 16.9","w":11.3},{"d":"M694.8 16.9L718.0 22.8","w":13.6},{"d":"M718.0 22.8L730.8 26.2L733.9 27.8L741.2 28.9","w":16.8},{"d":"M741.2 28.9L754.5 32.2L757.9 34.8L764.0 35.2","w":22.7},{"d":"M764.0 35.2L777.2 35.5L780.2 37.0L787.8 38.2","w":23.6},{"d":"M787.8 38.2L801.5 39.7L811.8 40.2","w":21.6},{"d":"M811.8 40.2L823.5 39.4L835.5 37.2","w":21.6},{"d":"M835.5 37.2L841.5 34.9L847.5 30.7L850.6 26.9L852.4 21.9","w":17.0},{"d":"M852.4 21.9L852.3 15.9L851.2 11.7","w":7.4}],[{"d":"M732.8 27.9L727.4 33.8L719.8 36.5L712.5 40.1","w":15.4},{"d":"M712.5 40.1L702.2 46.4L692.5 53.9","w":13.2},{"d":"M692.5 53.9L674.5 69.9","w":16.5},{"d":"M674.5 69.9L657.6 87.2","w":18.5},{"d":"M657.6 87.2L641.6 105.2","w":20.0},{"d":"M641.6 105.2L625.9 123.4","w":20.8},{"d":"M625.9 123.4L610.5 141.9","w":21.2},{"d":"M610.5 141.9L595.2 160.4","w":21.3},{"d":"M595.2 160.4L579.9 178.9","w":21.2},{"d":"M579.9 178.9L564.4 197.4","w":20.9},{"d":"M564.4 197.4L548.4 215.4","w":20.1},{"d":"M548.4 215.4L532.2 233.2","w":19.0},{"d":"M532.2 233.2L515.2 250.4","w":17.6},{"d":"M515.2 250.4L497.5 266.7","w":15.8},{"d":"M497.5 266.7L478.8 281.8","w":13.5},{"d":"M478.8 281.8L467.5 289.5L458.5 294.9","w":11.0},{"d":"M458.5 294.9L449.5 299.6L436.5 304.9","w":8.2},{"d":"M436.5 304.9L424.8 308.0L413.0 309.5","w":6.0},{"d":"M413.0 309.5L400.0 309.4L389.0 307.4","w":8.0},{"d":"M389.0 307.4L383.8 305.9L376.8 302.9L371.8 300.0L367.5 296.8","w":12.7},{"d":"M367.5 296.8L363.0 292.7L359.1 287.9L355.9 283.2L353.1 277.7","w":16.5},{"d":"M353.1 277.7L349.3 266.7L347.3 254.4","w":17.9},{"d":"M347.3 254.4L346.8 247.9L348.5 230.4","w":17.9},{"d":"M348.5 230.4L350.7 219.4L354.6 207.2","w":16.4},{"d":"M354.6 207.2L359.9 194.9L365.2 185.7","w":13.2},{"d":"M365.2 185.7L373.0 174.7","w":8.4}],[{"d":"M757.2 35.2L753.1 44.7L742.2 53.3","w":22.5},{"d":"M742.2 53.3L724.2 69.4","w":17.2},{"d":"M724.2 69.4L707.1 86.4","w":17.7},{"d":"M707.1 86.4L690.8 104.4","w":18.2},{"d":"M690.8 104.4L675.0 122.7","w":18.3},{"d":"M675.0 122.7L659.6 141.4","w":18.7},{"d":"M659.6 141.4L644.4 160.2","w":18.8},{"d":"M644.4 160.2L629.2 178.9","w":19.0},{"d":"M629.2 178.9L620.4 189.7L618.4 194.4L615.0 198.2","w":21.3},{"d":"M615.0 198.2L598.8 215.9","w":21.3},{"d":"M598.8 215.9L583.4 234.4","w":18.6},{"d":"M583.4 234.4L567.9 252.9","w":18.7},{"d":"M567.9 252.9L554.5 268.4L551.2 270.2","w":19.1},{"d":"M551.2 270.2L537.2 275.2","w":13.4}],[{"d":"M618.8 194.7L622.5 198.3L624.0 198.7L628.2 197.0L638.0 189.0","w":16.3},{"d":"M638.0 189.0L648.5 181.6L658.5 176.4","w":5.6},{"d":"M658.5 176.4L666.5 174.1L672.8 174.0L677.5 175.9L678.9 177.2L679.9 179.4","w":7.9},{"d":"M679.9 179.4L681.3 184.9L681.2 189.4L678.7 195.4L674.9 201.7","w":18.3},{"d":"M674.9 201.7L668.4 210.4L659.8 220.4","w":21.1},{"d":"M659.8 220.4L643.9 238.7","w":21.1},{"d":"M643.9 238.7L636.6 248.2L633.3 253.4L630.8 258.7","w":20.3},{"d":"M630.8 258.7L629.8 261.7L630.1 265.2L631.4 269.7L632.7 272.4L634.0 273.5L635.5 274.1L641.8 273.8","w":15.3},{"d":"M641.8 273.8L649.8 270.9L656.0 267.2L662.8 262.5","w":4.9},{"d":"M662.8 262.5L671.8 255.5L681.2 247.1","w":5.1},{"d":"M681.2 247.1L688.2 240.4L690.2 239.1L691.8 238.6L692.8 238.9L696.0 241.9L697.1 242.4L698.1 241.9L699.6 239.9","w":19.7},{"d":"M699.6 239.9L708.1 228.2L714.2 220.7","w":19.7},{"d":"M714.2 220.7L715.8 219.4L719.0 215.2L731.2 203.5","w":18.8},{"d":"M731.2 203.5L741.2 195.0L750.2 188.5","w":16.8},{"d":"M750.2 188.5L762.0 181.2L771.5 176.9","w":12.8},{"d":"M771.5 176.9L779.0 174.9L785.8 174.9L787.8 175.9L789.4 177.4L790.3 179.4L790.8 182.2","w":7.1},{"d":"M790.8 182.2L790.2 186.2L788.6 190.7L784.4 197.2L779.2 202.9","w":5.9},{"d":"M779.2 202.9L769.5 211.1L760.0 217.3","w":5.2},{"d":"M760.0 217.3L749.5 222.7L738.0 226.7","w":4.9},{"d":"M738.0 226.7L733.2 227.7L729.0 227.7L726.0 227.1L721.5 225.2L716.2 220.4","w":18.4},{"d":"M716.2 220.4L714.5 220.5L711.4 223.9L701.0 238.2","w":19.2},{"d":"M701.0 238.2L697.3 243.0L694.7 249.9L692.6 256.7L692.8 260.2","w":19.7},{"d":"M692.8 260.2L694.9 268.2L697.0 271.4L699.5 272.9L701.5 273.5L704.5 273.9L708.5 273.7","w":14.6},{"d":"M708.5 273.7L717.0 272.4L723.2 270.5L731.5 267.0","w":5.4},{"d":"M731.5 267.0L742.8 260.5L752.0 254.0","w":4.9},{"d":"M752.0 254.0L760.8 247.0L770.2 238.2","w":4.9},{"d":"M770.2 238.2L787.5 220.5L790.5 219.2","w":5.1}]]]},"coastal":{"fills":["M686.82 749.46C591.536 837.208 554.238 949.4 634.79 950.027C715.342 950.654 814.073 817.465 752.013 817.465C716.596 817.465 665.82 862.906 660.491 899.258C660.491 900.512 657.671 900.198 657.671 899.258C663.626 861.965 712.208 814.331 757.969 814.331C831.625 814.331 753.581 951.907 634.79 951.907C543.582 951.907 567.089 840.655 657.984 752.594C596.551 760.428 445.164 791.454 445.164 890.484C444.537 914.301 464.597 933.104 494.373 931.85C500.955 931.537 507.85 930.284 515.059 927.463C517.253 926.836 518.194 929.343 515.373 930.284C508.164 932.791 501.268 934.044 494.373 934.358C457.075 934.671 432 916.808 432 885.469C432 792.08 593.731 756.354 661.745 749.147C724.431 689.603 813.759 642.595 902.46 642.909C914.684 642.909 930.669 648.55 930.669 663.592C930.042 734.104 738.222 739.745 686.82 749.46ZM692.148 744.759L692.775 745.699C741.357 737.238 926.908 730.03 927.848 664.219C928.162 649.803 914.371 646.669 903.087 646.669C844.789 647.61 752.013 690.857 692.148 744.759Z","M902.218 870.113H905.666C900.964 875.441 895.949 880.769 890.934 885.783C881.218 895.498 869.935 903.019 860.218 903.019C854.89 903.019 851.442 899.885 850.502 895.184C833.263 912.734 812.577 926.523 795.651 926.523C784.054 926.523 776.845 919.942 776.845 908.66C776.845 905.213 777.472 901.139 779.039 897.065C789.383 867.293 836.084 824.046 873.069 824.046C881.845 824.046 885.606 828.433 885.606 835.641C885.606 849.43 871.502 873.247 852.696 893.304C853.009 897.691 855.83 900.512 860.218 900.512C870.248 900.512 882.158 890.797 889.054 883.902L902.218 870.113ZM850.188 892.364C850.188 880.142 862.726 867.293 871.502 865.099C878.711 853.817 883.099 843.162 883.099 835.954C883.099 830 879.964 826.239 873.069 826.239C852.382 826.239 788.129 894.871 788.129 917.435C788.129 921.822 790.636 924.329 796.278 924.329C812.89 924.329 833.263 909.913 850.188 892.364Z","M942.952 895.184H941.071C922.265 913.674 905.027 926.836 895.31 926.836C883.4 926.836 878.385 921.509 878.385 913.361C878.385 885.469 936.37 823.732 981.817 823.732C989.34 823.732 993.414 826.553 993.414 830.94C993.414 831.567 993.101 832.194 993.101 832.821C998.116 827.18 1001.56 823.419 1001.56 823.419H1026.01C987.772 864.159 946.399 908.973 946.399 921.509C946.399 923.389 947.653 924.329 950.161 924.329C965.205 924.329 994.041 897.378 1019.12 870.113H1022.56C997.175 898.318 966.773 926.836 949.534 926.836C942.011 926.836 936.37 922.136 936.37 913.674C936.37 908.66 938.25 902.392 942.952 895.184ZM895.624 924.956C906.594 924.956 931.041 903.019 951.728 880.769C964.892 866.666 976.489 852.877 983.384 844.416C987.146 839.715 990.907 834.387 990.907 830.627C990.907 828.12 989.026 826.239 984.011 826.239C961.131 826.239 891.236 902.079 891.236 920.882C891.236 923.389 892.489 924.956 895.624 924.956Z","M1096.56 870.113H1100L1088.41 882.649C1074.93 896.751 1054.56 914.614 1034.18 923.076C1027.29 926.21 1019.76 927.776 1012.24 927.776C997.197 927.776 990.615 916.808 990.615 904.586C990.929 888.29 1003.15 870.74 1018.82 870.113C1036.38 854.444 1053.3 839.402 1067.72 828.747C1074.3 821.225 1085.9 813.391 1095.93 813.391C1097.18 813.391 1097.81 814.017 1097.81 815.584C1097.81 818.405 1091.54 821.225 1084.02 822.792C1066.78 831.254 1066.78 861.965 1063.64 878.575C1060.51 895.184 1054.24 906.153 1047.35 913.361C1062.08 904.586 1075.87 892.05 1085.27 882.336L1096.56 870.113ZM1061.76 836.895C1048.29 847.236 1033.24 859.458 1022.59 870.113C1025.41 870.74 1026.03 872.621 1026.03 874.501C1026.03 877.008 1024.47 879.828 1023.84 879.828C1023.53 879.828 1022.9 876.695 1017.57 876.695C1004.09 876.695 993.75 891.737 993.436 904.272V905.839C993.436 916.181 999.078 925.583 1012.24 925.583C1029.79 925.583 1038.88 905.526 1046.09 874.187C1049.54 859.145 1056.12 845.669 1061.76 836.895Z","M1219.45 751.967C1205.35 768.576 1186.85 789.573 1170.24 808.69H1199.7V811.197H1168.05C1163.35 816.211 1082.17 906.153 1082.17 921.509C1082.17 923.389 1084.05 924.329 1084.99 924.329C1100.03 924.329 1128.87 897.378 1153.94 870.113H1157.39C1131.69 898.318 1101.6 926.836 1084.36 926.836C1072.45 926.836 1069 919.628 1069 913.361C1069 907.093 1073.7 896.438 1078.41 890.484C1099.09 862.906 1121.66 836.895 1144.23 811.197H1123.23V808.69H1146.42C1159.27 793.647 1176.2 774.531 1190.61 757.921C1192.18 758.235 1193.75 759.175 1195.32 759.175C1203.78 759.175 1209.73 751.967 1219.45 751.967Z","M1194.25 895.184H1192.37C1173.56 913.674 1156.32 926.836 1146.61 926.836C1134.7 926.836 1129.68 921.509 1129.68 913.361C1129.68 885.469 1187.67 823.732 1233.11 823.732C1240.64 823.732 1244.71 826.553 1244.71 830.94C1244.71 831.567 1244.4 832.194 1244.4 832.821C1249.41 827.18 1252.86 823.419 1252.86 823.419H1277.31C1239.07 864.159 1197.7 908.973 1197.7 921.509C1197.7 923.389 1198.95 924.329 1201.46 924.329C1216.5 924.329 1245.34 897.378 1270.41 870.113H1273.86C1248.47 898.318 1218.07 926.836 1200.83 926.836C1193.31 926.836 1187.67 922.136 1187.67 913.674C1187.67 908.66 1189.55 902.392 1194.25 895.184ZM1146.92 924.956C1157.89 924.956 1182.34 903.019 1203.02 880.769C1216.19 866.666 1227.78 852.877 1234.68 844.416C1238.44 839.715 1242.2 834.387 1242.2 830.627C1242.2 828.12 1240.32 826.239 1235.31 826.239C1212.43 826.239 1142.53 902.079 1142.53 920.882C1142.53 923.389 1143.79 924.956 1146.92 924.956Z","M1259.15 924.329C1274.19 924.329 1303.03 897.378 1328.1 870.113H1331.55C1305.85 898.318 1275.76 926.836 1258.52 926.836C1246.61 926.836 1243.17 919.628 1243.17 913.361C1243.17 907.093 1247.87 896.438 1252.57 890.484C1269.49 867.92 1288.61 845.043 1307.42 823.732C1330.61 797.095 1395.18 722.822 1395.18 722.822H1419C1284.85 881.082 1254.76 903.646 1254.76 920.569C1254.76 922.762 1256.02 924.329 1259.15 924.329Z"],"letters":[[[{"d":"M515.2 928.6L503.0 932.0L491.8 932.8","w":5.2},{"d":"M491.8 932.8L479.5 932.0L468.0 928.9","w":6.4},{"d":"M468.0 928.9L462.2 926.4L456.8 923.1L451.5 918.8L448.2 915.3","w":11.1},{"d":"M448.2 915.3L444.3 909.8L441.9 904.8L440.3 899.6L439.4 893.3","w":14.4},{"d":"M439.4 893.3L438.6 884.1L439.4 875.1L440.5 869.3","w":16.0},{"d":"M440.5 869.3L444.2 857.3L449.2 846.8","w":16.0},{"d":"M449.2 846.8L454.8 838.1L463.5 827.3","w":14.9},{"d":"M463.5 827.3L473.0 818.1L481.5 811.2","w":12.7},{"d":"M481.5 811.2L491.2 804.3L501.8 797.8","w":10.5},{"d":"M501.8 797.8L511.5 792.4L523.2 786.7","w":8.8},{"d":"M523.2 786.7L545.5 777.5","w":7.5},{"d":"M545.5 777.5L568.2 769.8","w":6.9},{"d":"M568.2 769.8L591.5 763.3","w":6.4},{"d":"M591.5 763.3L615.0 758.0","w":5.9},{"d":"M615.0 758.0L638.8 753.6","w":5.9},{"d":"M638.8 753.6L658.0 751.0L659.5 751.4L661.8 753.6","w":13.6},{"d":"M661.8 753.6L664.5 756.1L665.5 756.2L667.2 755.4L680.2 743.6","w":20.1},{"d":"M680.2 743.6L684.3 741.5L687.0 737.7L698.2 728.2","w":19.7},{"d":"M698.2 728.2L717.5 713.8","w":18.9},{"d":"M717.5 713.8L737.5 700.5","w":18.3},{"d":"M737.5 700.5L758.2 688.2","w":17.7},{"d":"M758.2 688.2L779.8 677.2","w":16.9},{"d":"M779.8 677.2L801.8 667.4","w":15.8},{"d":"M801.8 667.4L824.2 659.0","w":14.3},{"d":"M824.2 659.0L847.5 652.2","w":12.4},{"d":"M847.5 652.2L871.0 647.3","w":10.2},{"d":"M871.0 647.3L881.5 645.8L895.0 644.8","w":8.1},{"d":"M895.0 644.8L904.2 644.6L910.0 645.2L914.8 646.3L918.8 648.0","w":6.4},{"d":"M918.8 648.0L923.5 651.1L927.0 655.6L928.2 658.6L928.8 662.1L928.6 667.8","w":5.4},{"d":"M928.6 667.8L927.5 673.3L925.2 679.1L921.9 684.6L918.1 689.3","w":5.4},{"d":"M918.1 689.3L909.2 697.3L899.0 703.8","w":5.2},{"d":"M899.0 703.8L887.8 709.5L877.0 713.9","w":5.1},{"d":"M877.0 713.9L854.0 721.4","w":5.1},{"d":"M854.0 721.4L830.5 727.2","w":5.3},{"d":"M830.5 727.2L806.8 731.7","w":5.4},{"d":"M806.8 731.7L783.0 735.5","w":5.4},{"d":"M783.0 735.5L759.0 738.7","w":5.4},{"d":"M759.0 738.7L735.0 741.5","w":5.4},{"d":"M735.0 741.5L711.0 744.3","w":5.4},{"d":"M711.0 744.3L691.8 746.8L690.2 746.4L688.0 744.3","w":12.7},{"d":"M688.0 744.3L684.9 741.8L681.5 742.8L676.2 747.1L669.2 753.8","w":20.1},{"d":"M669.2 753.8L664.9 756.7L663.2 759.6L652.4 770.8","w":20.8},{"d":"M652.4 770.8L636.6 789.1","w":21.0},{"d":"M636.6 789.1L622.0 808.3","w":21.1},{"d":"M622.0 808.3L609.0 828.6","w":21.0},{"d":"M609.0 828.6L602.6 840.1L597.8 849.8","w":20.8},{"d":"M597.8 849.8L593.1 860.6L589.0 872.3","w":20.1},{"d":"M589.0 872.3L585.6 885.3L584.0 895.8","w":19.0},{"d":"M584.0 895.8L583.8 899.6L584.2 906.3L586.3 919.8","w":17.1},{"d":"M586.3 919.8L587.9 924.8L591.4 931.8L595.4 936.8L598.8 940.0","w":13.1},{"d":"M598.8 940.0L603.5 943.4L608.5 946.0L614.2 948.0L620.5 949.5","w":8.4},{"d":"M620.5 949.5L629.5 950.6L644.5 950.2","w":4.9},{"d":"M644.5 950.2L657.2 948.5L668.2 945.7","w":7.1},{"d":"M668.2 945.7L682.0 940.9L690.8 937.0","w":10.5},{"d":"M690.8 937.0L701.0 931.7L711.8 925.2","w":13.9},{"d":"M711.8 925.2L720.2 919.3L731.0 910.8","w":16.6},{"d":"M731.0 910.8L744.2 898.6L748.2 894.1","w":18.3},{"d":"M748.2 894.1L757.6 883.1L763.3 875.3","w":19.3},{"d":"M763.3 875.3L769.2 865.8L774.9 854.1","w":19.4},{"d":"M774.9 854.1L777.2 847.1L778.5 839.3L777.0 830.6","w":19.2},{"d":"M777.0 830.6L774.6 824.3L771.5 820.7L766.5 817.7L760.0 816.0","w":14.9},{"d":"M760.0 816.0L750.5 815.8L743.8 816.7L736.2 818.6","w":6.7},{"d":"M736.2 818.6L724.2 823.2L714.2 828.5","w":5.1},{"d":"M714.2 828.5L704.5 834.9L694.8 842.7","w":5.2},{"d":"M694.8 842.7L685.0 852.1L678.1 860.1","w":5.2},{"d":"M678.1 860.1L670.7 870.1L664.9 880.3","w":5.2},{"d":"M664.9 880.3L661.9 887.3L658.8 898.6","w":5.4}]],[[{"d":"M851.1 893.5L851.5 891.3L854.5 885.5L858.2 880.3L863.8 873.5","w":10.7},{"d":"M863.8 873.5L872.4 865.3L878.4 854.8","w":10.2},{"d":"M878.4 854.8L881.7 847.0L883.3 841.3L884.1 836.3L883.5 831.8","w":5.1},{"d":"M883.5 831.8L882.5 829.3L881.1 827.6L876.6 825.3L869.3 825.2L862.6 826.9","w":6.7},{"d":"M862.6 826.9L853.3 830.9L841.3 838.0","w":12.9},{"d":"M841.3 838.0L832.3 844.7L822.3 853.2","w":16.9},{"d":"M822.3 853.2L810.7 864.5L805.5 870.5","w":18.7},{"d":"M805.5 870.5L799.9 877.0L791.0 889.8","w":19.0},{"d":"M791.0 889.8L786.4 898.0L784.3 903.3L782.9 907.8L783.2 912.0","w":18.6},{"d":"M783.2 912.0L785.2 919.3L787.3 922.5L789.8 924.0L791.8 924.6L795.1 925.0L799.6 924.8","w":14.1},{"d":"M799.6 924.8L805.1 923.8L811.6 921.6L822.1 916.4","w":4.5},{"d":"M822.1 916.4L831.3 910.2L841.3 902.0","w":4.9},{"d":"M841.3 902.0L848.9 894.9L850.4 894.1L851.3 894.6L852.5 897.3L854.6 899.7L856.1 900.7L858.8 901.3","w":5.6},{"d":"M858.8 901.3L863.1 901.2L869.1 899.4L874.6 896.7L880.8 892.4","w":5.2},{"d":"M880.8 892.4L888.6 885.8L898.2 875.8","w":5.2},{"d":"M898.2 875.8L902.3 871.3L905.1 870.0","w":5.2}]],[[{"d":"M997.1 839.2L992.1 833.9L991.6 829.4L990.1 826.9L988.6 825.9L986.6 825.3L981.4 824.9","w":18.5},{"d":"M981.4 824.9L976.9 825.5L969.9 827.6L958.9 832.8","w":11.8},{"d":"M958.9 832.8L950.4 837.9L938.9 846.3","w":17.0},{"d":"M938.9 846.3L930.6 853.0L920.9 862.2","w":19.7},{"d":"M920.9 862.2L912.1 871.2L904.7 879.9","w":20.7},{"d":"M904.7 879.9L898.4 887.9L890.7 899.7","w":20.6},{"d":"M890.7 899.7L887.5 905.9L885.3 912.4L886.1 917.2L888.3 922.2","w":19.6},{"d":"M888.3 922.2L891.1 924.9L893.6 925.4L897.4 925.3L902.6 923.6L909.9 919.6","w":9.5},{"d":"M909.9 919.6L918.4 913.6L928.9 904.7","w":4.9},{"d":"M928.9 904.7L938.9 895.2L940.9 893.8L945.1 892.8L948.9 896.2","w":15.5}],[{"d":"M1025.4 823.4L1008.4 829.3L1003.9 833.7","w":20.2},{"d":"M1003.9 833.7L1000.1 837.9L997.2 839.7L987.9 851.7","w":20.4},{"d":"M987.9 851.7L972.1 869.9","w":19.4},{"d":"M972.1 869.9L956.1 888.2","w":19.7},{"d":"M956.1 888.2L949.5 896.0L947.7 900.9L943.5 908.4","w":20.3},{"d":"M943.5 908.4L942.1 912.2L941.9 915.2L944.2 922.7L945.2 924.0L947.1 924.9L952.4 925.0","w":15.9},{"d":"M952.4 925.0L957.1 923.8L962.9 921.1L973.6 914.3","w":5.1},{"d":"M973.6 914.3L981.4 908.3L992.1 898.9","w":5.2},{"d":"M992.1 898.9L1009.4 881.9","w":5.2},{"d":"M1009.4 881.9L1018.9 871.7L1021.6 869.9","w":5.2}]],[[{"d":"M1020.6 872.9L1021.3 870.1L1022.4 868.1L1036.6 855.5","w":9.6},{"d":"M1036.6 855.5L1055.1 840.1","w":5.2},{"d":"M1055.1 840.1L1059.6 836.6L1061.6 835.7L1062.9 835.5L1065.1 836.8L1066.1 836.6L1073.0 827.7","w":12.7},{"d":"M1073.0 827.7L1076.4 824.3L1080.9 821.1L1095.1 815.1","w":9.5}],[{"d":"M1065.4 837.6L1064.9 841.1L1061.4 850.9L1058.7 860.6","w":17.1},{"d":"M1058.7 860.6L1052.6 883.9","w":20.6},{"d":"M1052.6 883.9L1048.7 895.1L1043.3 906.1","w":20.5},{"d":"M1043.3 906.1L1041.9 910.0L1040.0 912.4L1033.6 918.3L1026.9 922.8","w":16.7},{"d":"M1026.9 922.8L1021.1 925.1L1013.4 926.4L1007.6 926.0L1003.6 924.9","w":8.0},{"d":"M1003.6 924.9L999.1 922.3L995.1 917.6L992.9 912.6L991.9 905.4","w":5.4},{"d":"M991.9 905.4L992.3 899.1L993.8 893.6L996.3 888.4L999.9 883.1","w":6.6},{"d":"M999.9 883.1L1003.9 879.0L1008.4 876.0L1012.9 874.2L1020.4 873.1","w":9.8}],[{"d":"M1042.1 910.4L1045.6 913.7L1047.9 913.9L1054.1 910.1L1061.9 904.5","w":14.3},{"d":"M1061.9 904.5L1069.4 898.4L1080.1 888.6","w":4.9},{"d":"M1080.1 888.6L1096.6 871.4L1099.1 869.9","w":5.2}]],[[{"d":"M1219.0 752.0L1213.5 754.9L1203.0 762.4L1198.5 764.4","w":14.1},{"d":"M1198.5 764.4L1196.2 765.2L1194.6 766.5L1181.8 781.2","w":20.4},{"d":"M1181.8 781.2L1165.9 799.5","w":20.5},{"d":"M1165.9 799.5L1163.0 803.7L1160.4 805.7L1153.0 814.2L1150.9 815.6L1150.1 817.2","w":20.5},{"d":"M1150.1 817.2L1134.4 835.5","w":20.1},{"d":"M1134.4 835.5L1118.6 854.0","w":20.1},{"d":"M1118.6 854.0L1103.1 872.7","w":20.1},{"d":"M1103.1 872.7L1088.4 891.7","w":20.4},{"d":"M1088.4 891.7L1080.3 903.5L1077.3 909.5L1076.3 912.5","w":20.6},{"d":"M1076.3 912.5L1076.6 915.5L1077.9 919.5L1079.6 923.0L1081.0 924.4L1082.8 925.1L1085.8 925.2L1091.8 923.8","w":17.5},{"d":"M1091.8 923.8L1095.8 922.2L1101.2 919.1L1112.2 911.4","w":4.9},{"d":"M1112.2 911.4L1130.5 895.5","w":5.2},{"d":"M1130.5 895.5L1147.6 878.2","w":5.2},{"d":"M1147.6 878.2L1154.1 871.3L1157.0 870.0","w":5.2}],[{"d":"M1124.0 810.0L1144.0 809.7L1145.5 810.3L1147.2 812.0","w":12.1},{"d":"M1147.2 812.0L1150.0 814.7L1151.8 815.0L1153.2 814.0L1161.2 804.9L1163.1 804.4L1165.0 805.7","w":20.5},{"d":"M1165.0 805.7L1168.2 808.9L1169.8 809.7L1187.5 809.7","w":16.9},{"d":"M1187.5 809.7L1198.2 809.7","w":4.9}]],[[{"d":"M1243.4 833.2L1242.5 828.4L1241.4 826.9L1239.7 825.8L1236.7 825.0L1232.2 824.9L1224.7 826.4","w":7.0},{"d":"M1224.7 826.4L1216.2 829.7L1203.2 837.0","w":13.8},{"d":"M1203.2 837.0L1193.2 844.0L1183.9 851.5","w":18.1},{"d":"M1183.9 851.5L1172.4 861.9L1166.4 868.2","w":20.4},{"d":"M1166.4 868.2L1157.8 877.7L1150.8 886.4","w":20.6},{"d":"M1150.8 886.4L1141.5 900.4L1138.4 906.9","w":20.5},{"d":"M1138.4 906.9L1136.7 911.7L1136.6 913.4L1138.6 920.2L1139.9 922.7L1141.7 924.5L1143.7 925.3L1146.4 925.4","w":18.4},{"d":"M1146.4 925.4L1150.4 924.9L1155.9 922.6L1161.4 919.5L1167.7 915.1","w":4.6},{"d":"M1167.7 915.1L1176.4 908.0L1185.9 899.3","w":4.9},{"d":"M1185.9 899.3L1190.9 894.5L1195.7 892.8L1197.2 893.3L1200.2 896.2","w":15.5}],[{"d":"M1276.7 823.4L1259.7 829.3L1255.2 833.7","w":20.2},{"d":"M1255.2 833.7L1251.4 837.9L1248.5 839.7L1239.2 851.7","w":20.5},{"d":"M1239.2 851.7L1223.4 869.9","w":19.4},{"d":"M1223.4 869.9L1207.4 888.2","w":19.7},{"d":"M1207.4 888.2L1200.8 896.0L1198.9 901.2L1194.8 908.4","w":20.3},{"d":"M1194.8 908.4L1193.3 912.2L1193.2 915.2L1195.5 922.7L1196.5 924.0L1198.4 924.9L1203.7 925.0","w":15.9},{"d":"M1203.7 925.0L1208.4 923.8L1214.2 921.1L1224.9 914.3","w":5.1},{"d":"M1224.9 914.3L1232.7 908.3L1243.4 898.9","w":5.2},{"d":"M1243.4 898.9L1260.7 881.9","w":5.2},{"d":"M1260.7 881.9L1270.2 871.7L1272.9 869.9","w":5.2}]],[[{"d":"M1418.7 722.8L1402.4 728.8L1400.9 729.8L1397.7 733.6","w":20.8},{"d":"M1397.7 733.6L1381.9 751.8","w":20.8},{"d":"M1381.9 751.8L1366.1 770.1","w":21.0},{"d":"M1366.1 770.1L1350.2 788.3","w":21.0},{"d":"M1350.2 788.3L1334.3 806.6","w":21.0},{"d":"M1334.3 806.6L1318.4 824.8","w":20.9},{"d":"M1318.4 824.8L1302.5 842.8","w":20.8},{"d":"M1302.5 842.8L1286.7 861.1","w":20.6},{"d":"M1286.7 861.1L1271.0 879.6","w":20.0},{"d":"M1271.0 879.6L1256.1 898.6","w":19.0},{"d":"M1256.1 898.6L1251.7 906.1L1249.5 912.3L1249.6 915.1L1251.3 920.8","w":18.1},{"d":"M1251.3 920.8L1252.3 922.8L1253.9 924.3L1256.4 925.2L1259.4 925.3L1265.9 923.9L1272.7 920.7","w":9.9},{"d":"M1272.7 920.7L1281.7 915.0L1292.2 906.8","w":5.1},{"d":"M1292.2 906.8L1309.9 890.5","w":5.2},{"d":"M1309.9 890.5L1328.2 871.6L1331.2 870.1","w":5.2}]]]},"knock":[{"d":"M625.2 274.1L625.0 274.1L622.9 271.8L621.4 268.5L621.4 267.8L621.1 267.5L621.1 266.8L620.6 265.5L620.6 259.2L620.9 259.0L620.9 257.5L621.1 257.2L621.4 255.2L621.6 255.0L621.6 254.0L621.9 253.8L622.9 250.2L623.6 249.0L623.6 248.5L626.9 242.0L633.1 232.5L635.2 230.4L635.8 230.4L639.8 228.9L641.5 228.6L642.5 228.1L643.2 228.1L643.5 227.9L644.2 227.9L644.5 227.6L647.2 227.1L647.5 226.9L648.5 226.9L648.8 226.6L651.0 226.4L651.2 226.1L652.2 226.1L652.5 225.9L653.8 225.9L654.0 225.6L655.0 225.6L655.2 225.4L657.0 225.4L657.2 225.1L660.5 224.9L660.8 224.6L663.2 224.6L663.5 224.4L665.8 224.4L666.0 224.1L670.0 224.1L670.2 223.9L686.0 223.9L686.2 224.1L690.2 224.1L690.5 224.4L693.2 224.4L693.5 224.6L697.8 224.9L698.0 225.1L699.5 225.1L699.8 225.4L702.8 225.6L703.0 225.9L704.2 225.9L704.5 226.1L705.8 226.1L706.0 226.4L708.2 226.6L708.5 226.9L710.2 227.1L710.5 227.4L711.5 227.4L711.8 227.6L715.5 228.4L718.0 229.4L719.5 229.6L721.1 231.2L717.6 235.5L716.4 237.5L713.6 241.0L712.1 243.5L711.4 244.2L709.9 246.5L709.6 247.2L709.1 247.8L708.9 248.5L707.9 249.8L707.6 250.5L707.1 251.0L706.9 251.8L706.4 252.2L704.1 257.0L702.8 258.4L701.5 257.9L700.5 257.9L700.2 257.6L698.2 257.4L698.0 257.1L696.8 257.1L696.5 256.9L695.2 256.9L695.0 256.6L691.5 256.4L691.2 256.1L689.2 256.1L689.0 255.9L685.8 255.9L685.5 255.6L671.5 255.6L671.2 255.9L666.2 256.1L666.0 256.4L664.8 256.4L664.5 256.6L663.0 256.6L662.8 256.9L660.0 257.1L659.8 257.4L654.8 258.4L653.8 258.9L653.0 258.9L651.2 259.6L650.5 259.6L650.2 259.9L649.0 260.1L647.0 261.1L644.5 261.9L641.2 263.6L640.8 263.6L639.2 264.4L638.8 264.9L637.5 265.4L637.0 265.9L635.2 266.6L630.8 269.6L627.8 272.1L626.5 272.9L625.2 274.1Z","part":"the","l":0,"s":3,"c":21},{"d":"M411.5 315.4L411.0 315.4L409.6 314.0L410.1 313.2L410.9 310.8L411.4 310.0L411.6 308.8L412.1 308.0L412.4 306.8L412.9 306.0L413.1 304.8L413.6 304.0L413.9 302.8L414.4 302.0L414.6 300.8L415.1 300.0L415.4 298.8L415.9 298.0L416.1 296.8L417.4 294.0L417.4 293.5L418.1 292.0L418.4 290.8L418.9 290.0L419.1 288.8L420.1 286.8L420.4 285.5L420.9 284.8L421.1 283.5L421.6 282.8L421.9 281.5L422.4 280.8L422.6 279.5L423.1 278.8L423.4 277.5L423.9 276.8L424.1 275.5L424.6 274.8L424.9 273.5L425.4 272.8L425.4 272.2L426.1 270.8L426.4 269.5L426.9 268.8L427.1 267.5L428.1 265.5L428.4 264.2L428.9 263.5L429.1 262.2L429.6 261.5L429.9 260.2L430.4 259.5L430.6 258.2L431.1 257.5L431.4 256.2L431.9 255.5L432.1 254.2L432.6 253.5L432.9 252.2L433.4 251.5L433.6 250.2L434.1 249.5L434.4 248.2L435.6 245.5L435.6 245.0L436.1 244.2L436.4 243.0L436.9 242.2L437.1 241.0L437.6 240.2L437.9 239.0L438.4 238.2L438.6 237.0L439.1 236.2L439.4 235.0L439.9 234.2L440.4 232.5L442.0 230.9L480.5 230.9L482.1 232.8L482.1 233.2L482.9 234.8L483.4 236.8L483.9 237.5L484.4 239.5L484.9 240.2L485.4 242.2L485.9 243.0L486.6 245.8L487.1 246.5L487.6 248.5L488.1 249.2L488.6 251.2L489.1 252.0L489.6 254.0L490.1 254.8L490.6 256.8L491.1 257.5L491.6 259.5L492.1 260.2L492.6 262.2L493.1 263.0L493.6 265.0L494.1 265.8L494.1 266.2L494.6 267.2L494.6 267.8L495.1 268.5L495.6 270.5L496.1 271.2L496.9 274.0L497.4 274.8L497.9 276.8L498.4 277.5L497.0 278.9L495.0 280.4L494.0 280.9L492.2 282.4L485.8 286.6L483.5 288.4L482.8 288.6L480.8 290.1L480.0 290.4L475.5 293.4L474.2 293.9L473.8 294.4L469.2 296.9L467.9 295.5L467.6 294.5L467.1 293.8L464.9 286.5L464.4 285.8L463.9 283.8L463.6 283.5L462.1 278.5L461.6 277.8L461.6 277.2L461.4 277.0L461.4 276.5L461.1 276.2L459.8 271.9L459.4 272.2L458.9 274.2L458.4 275.0L458.4 275.5L458.1 275.8L457.9 277.0L457.4 277.8L456.9 279.8L455.6 282.5L455.1 284.5L454.6 285.2L454.1 287.2L453.6 288.0L453.6 288.5L453.4 288.8L453.1 290.0L452.6 290.8L452.1 292.8L451.6 293.5L451.1 295.5L449.9 298.2L449.9 298.8L449.6 299.0L449.4 300.2L448.9 301.0L448.4 303.0L447.9 303.8L447.4 305.8L445.5 307.9L441.5 309.1L441.2 309.4L440.8 309.4L440.5 309.6L440.0 309.6L439.8 309.9L439.2 309.9L439.0 310.1L438.5 310.1L438.2 310.4L437.8 310.4L437.5 310.6L436.8 310.6L435.8 311.1L435.0 311.1L434.8 311.4L434.0 311.4L433.8 311.6L433.0 311.6L431.8 312.1L428.0 312.9L427.8 313.1L425.2 313.4L425.0 313.6L423.8 313.6L423.5 313.9L421.0 314.1L420.8 314.4L419.5 314.4L419.2 314.6L414.5 314.9L414.2 315.1L411.8 315.1L411.5 315.4Z","part":"the","l":0,"s":1,"c":17},{"d":"M730.5 273.4L729.5 272.9L727.0 270.4L724.2 268.4L722.6 266.8L722.6 266.5L724.0 265.1L724.5 265.1L727.0 263.9L727.5 263.9L733.0 261.1L733.5 260.6L734.8 260.1L735.2 259.6L739.0 257.6L746.8 252.4L750.8 249.4L751.8 248.4L752.2 248.4L753.0 248.9L758.9 254.8L757.2 256.4L755.0 257.9L754.0 258.9L745.5 264.9L744.8 265.1L742.8 266.6L742.0 266.9L739.0 268.9L731.0 272.9L730.5 273.4Z","part":"the","l":0,"s":3,"c":24},{"d":"M839.2 663.4L838.5 663.4L837.1 662.0L837.1 661.2L836.6 660.2L836.6 659.5L836.4 659.2L836.4 658.5L835.9 657.2L835.9 656.2L835.6 656.0L835.6 655.2L835.4 655.0L835.4 654.2L834.9 653.0L834.9 652.2L834.6 652.0L834.6 651.0L834.4 650.8L834.4 649.5L834.1 649.2L834.1 648.8L835.5 647.4L837.2 647.1L837.5 646.9L838.2 646.9L839.5 646.4L840.5 646.4L840.8 646.1L841.5 646.1L842.8 645.6L843.8 645.6L844.0 645.4L846.2 645.1L846.5 644.9L847.5 644.9L847.8 644.6L851.2 644.1L851.5 643.9L852.8 643.9L853.0 643.6L857.2 643.1L857.5 642.9L860.0 642.6L860.2 642.4L861.8 642.4L862.0 642.1L863.8 642.1L864.0 641.9L867.2 641.6L867.5 641.4L869.5 641.4L870.9 642.8L870.9 643.8L871.1 644.0L871.1 645.0L871.4 645.2L871.6 647.2L872.1 648.5L872.1 649.5L872.4 649.8L872.4 650.5L873.1 652.5L873.1 653.0L871.8 654.4L869.8 654.6L868.5 655.1L867.5 655.1L866.2 655.6L865.2 655.6L865.0 655.9L864.2 655.9L864.0 656.1L860.2 656.9L859.2 657.4L855.5 658.1L853.8 658.9L853.0 658.9L852.8 659.1L851.2 659.4L849.5 660.1L847.0 660.6L846.8 660.9L845.5 661.1L845.2 661.4L839.5 663.1L839.2 663.4Z","part":"coastal","l":0,"s":0,"c":24},{"d":"M826.2 741.1L792.2 741.1L790.9 739.8L790.9 662.5L792.5 660.9L795.0 660.1L795.8 659.6L797.0 659.4L797.8 658.9L799.0 658.6L799.8 658.1L802.5 657.4L803.2 656.9L803.8 656.9L804.0 656.6L806.8 655.9L807.0 655.6L807.5 655.6L807.8 655.4L808.2 655.4L809.2 654.9L814.2 653.4L814.5 653.1L815.2 653.1L817.8 652.1L820.2 651.6L821.2 651.1L822.8 650.9L823.8 650.4L824.5 650.4L825.5 649.9L826.2 649.9L827.6 651.2L827.6 739.8L826.2 741.1Z","part":"coastal","l":0,"s":0,"c":22},{"d":"M873.2 720.9L868.5 716.4L868.2 716.4L865.9 713.8L865.9 713.5L867.2 712.1L867.8 712.1L870.2 711.1L871.5 710.9L872.2 710.4L874.2 709.9L875.0 709.4L876.2 709.1L877.0 708.6L878.2 708.4L879.5 707.6L880.0 707.6L882.0 706.6L882.5 706.6L883.8 705.9L884.2 705.9L886.0 704.9L886.5 704.9L888.8 703.6L889.2 703.6L893.2 701.6L893.8 701.1L898.2 698.9L899.5 697.9L904.2 701.6L905.8 702.4L907.4 704.0L907.4 704.2L905.8 705.9L905.0 706.1L902.0 708.1L900.8 708.6L900.2 709.1L896.0 711.1L894.5 712.1L894.0 712.1L890.2 714.1L889.8 714.1L888.0 715.1L886.2 715.6L883.2 717.1L882.8 717.1L880.8 718.1L876.8 719.4L876.0 719.9L874.8 720.1L873.2 720.9Z","part":"coastal","l":0,"s":0,"c":31}]};
+/* Tiny deterministic timeline engine (no dependencies).
+   Every tween is a pure function of time, so any moment can be rendered or
+   seeked directly: add `?t=8.4` to the URL to freeze the page at 8.4 s. */
+(function () {
+  'use strict';
+
+  const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+
+  // Cubic-bezier easing (same maths as CSS)
+  function bezier(x1, y1, x2, y2) {
+    const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+    const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+    const sx = (t) => ((ax * t + bx) * t + cx) * t;
+    const sy = (t) => ((ay * t + by) * t + cy) * t;
+    const dx = (t) => (3 * ax * t + 2 * bx) * t + cx;
+    return function (x) {
+      if (x <= 0) return 0;
+      if (x >= 1) return 1;
+      let t = x;
+      for (let i = 0; i < 8; i++) {
+        const e = sx(t) - x, d = dx(t);
+        if (Math.abs(e) < 1e-6) break;
+        if (Math.abs(d) < 1e-6) break;
+        t -= e / d;
+      }
+      if (t < 0 || t > 1) { // bisection fallback
+        let lo = 0, hi = 1; t = x;
+        for (let i = 0; i < 30; i++) { const v = sx(t); if (Math.abs(v - x) < 1e-6) break; if (v < x) lo = t; else hi = t; t = (lo + hi) / 2; }
+      }
+      return sy(t);
+    };
+  }
+
+  const Ease = {
+    linear: (t) => t,
+    sineInOut: (t) => -(Math.cos(Math.PI * t) - 1) / 2,
+    power2Out: (t) => 1 - (1 - t) * (1 - t),
+    power2InOut: (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2),
+    power3In: (t) => t * t * t,
+    power3Out: (t) => 1 - Math.pow(1 - t, 3),
+    power3InOut: (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
+    power4InOut: (t) => (t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2),
+    expoOut: (t) => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t)),
+    expoIn: (t) => (t <= 0 ? 0 : Math.pow(2, 10 * t - 10)),
+    expoInOut: bezier(0.87, 0, 0.13, 1),
+    smooth: bezier(0.76, 0, 0.24, 1),
+    outQuint: bezier(0.22, 1, 0.36, 1),
+    bezier,
+  };
+
+  class Timeline {
+    constructor() { this.items = []; this.end = 0; }
+    /** fn(p) receives eased progress 0..1; called only when p changes.
+        A "from" tween (pre = true) holds its start state before it begins;
+        a "to" tween (pre = false) does nothing until its start time. */
+    add(at, dur, ease, fn, pre = true) {
+      const it = { at, dur: Math.max(0, dur), ease: ease || Ease.linear, fn, pre, last: NaN, active: undefined };
+      this.items.push(it);
+      this.end = Math.max(this.end, at + it.dur);
+      return this;
+    }
+    /** "to" tween shorthand */
+    to(at, dur, ease, fn) { return this.add(at, dur, ease, fn, false); }
+    /** instantaneous state switch: fn(true) after `at`, fn(false) before */
+    set(at, fn) { return this.add(at, 0, null, (p) => fn(p >= 1)); }
+    render(t) {
+      const items = this.items;
+      let changed = false;
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        const active = it.pre || t >= it.at;
+        if (active !== it.active) { it.active = active; changed = true; }
+      }
+      if (changed) for (let i = 0; i < items.length; i++) items[i].last = NaN;
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        if (!it.active) continue;
+        const raw = it.dur === 0 ? (t >= it.at ? 1 : 0) : clamp01((t - it.at) / it.dur);
+        if (raw === it.last) continue;
+        it.last = raw;
+        it.fn(it.ease(raw));
+      }
+    }
+  }
+
+  window.BT = { Timeline, Ease, clamp01, bezier };
+})();
+/* BLACKTHORN — preloader → hero. Everything runs on one clock (see engine.js).
+   URL helpers for review:  ?t=9.2  freeze at 9.2 s  ·  ?skip  jump to the finished hero
+                            ?speed=0.5  slow motion */
+(function () {
+  'use strict';
+  const { Timeline, Ease, clamp01 } = window.BT;
+  const LOGO = window.BT_LOGO;
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const qs = new URLSearchParams(location.search);
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const root = document.documentElement;
+
+  /* ------------------------------------------------------------------ */
+  /* Timing (seconds)                                                     */
+  /* ------------------------------------------------------------------ */
+  const T = { loadStart: 3.0, loadDur: 5.0 };
+  T.exit = T.loadStart + T.loadDur;          // 8.0   preloader UI leaves, keyhole starts to grow at once
+  T.zoom = T.exit;
+  T.zoomDur = 1.3;
+  T.open = T.zoom + T.zoomDur;               // 9.3   keyhole covers the screen
+  T.slide = T.zoom + 0.15;                   // photo heads left almost at once, always ahead of the keyhole edge,
+  T.slideDur = 0.65;                         // so no paper shows on the left while the keyhole opens
+  T.text = T.slide + T.slideDur - 0.05;      // 8.75 copy starts to materialise inside the opening keyhole
+  T.logo = T.text + 0.25;                    // BLACK / THORN, then the handwriting
+  T.slider = T.text + 0.9;                   // slideshow clock starts
+
+  /* ------------------------------------------------------------------ */
+  /* Keyhole geometry (Key hole Vector.svg, 202 × 405)                    */
+  /* ------------------------------------------------------------------ */
+  const KEY_D = 'M202 101.132C202 83.0026 197.134 65.2067 187.909 49.6069C178.685 34.0071 165.442 21.1769 149.567 12.4594C133.692 3.74185 115.768 -0.542453 97.6719 0.0549307C79.5759 0.652315 61.9729 6.10941 46.7057 15.855C31.4385 25.6006 19.0684 39.2763 10.8902 55.4506C2.71202 71.625 -0.973469 89.7031 0.219508 107.793C1.41248 125.882 7.44006 143.318 17.6713 158.276C27.9025 173.233 41.9612 185.161 58.3757 192.812L11.4231 404.918L110.04 405L190.536 404.918L143.665 192.812C161.096 184.676 175.846 171.726 186.179 155.486C196.513 139.245 202.002 120.388 202 101.132Z';
+  const NUM = /-?\d*\.?\d+(?:e-?\d+)?/g;
+  const KEY_NUMS = KEY_D.match(NUM).map(Number);
+  const KEY_CMDS = KEY_D.match(/[A-Za-z][^A-Za-z]*/g).map((s) => [s[0], (s.slice(1).match(NUM) || []).length]);
+  root.style.setProperty('--keyhole', 'url("data:image/svg+xml,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 202 405" preserveAspectRatio="none"><path d="' + KEY_D + '" fill="#fff"/></svg>') + '")');
+
+  /** keyhole outline as SVG path data, scaled by k around the viewport centre (optionally in a smaller canvas space) */
+  function keyholeD(k, px = 1) {
+    const s = (window.innerWidth / 1920) * k * px;
+    const cx = window.innerWidth / 2 * px, cy = window.innerHeight / 2 * px;
+    let out = '', n = 0;
+    for (const [c, count] of KEY_CMDS) {
+      out += c;
+      for (let i = 0; i < count; i += 2) {
+        const x = cx + (KEY_NUMS[n++] - 101) * s;
+        const y = cy + (KEY_NUMS[n++] - 202.5) * s;
+        out += (i ? ' ' : '') + x.toFixed(2) + ' ' + y.toFixed(2);
+      }
+    }
+    return out;
+  }
+  const keyholePath = (k) => 'path("' + keyholeD(k) + '")';
+
+  /* Soft edge: inside the keyhole the picture falls off into darkness, like a lens out of focus.
+     Drawn on a half-resolution canvas: fill the keyhole dark, then erase a blurred, slightly smaller
+     keyhole from it (canvas shadowBlur does the blur, so it works in every browser). */
+  const vignette = $('#keyVignette');
+  const vctx = vignette.getContext('2d');
+  const V_RES = 0.5, V_SOFT = 0.04;                      // canvas scale · blur width as a share of keyhole width
+  function drawVignette(k, amount) {
+    const W = Math.round(window.innerWidth * V_RES), H = Math.round(window.innerHeight * V_RES);
+    if (vignette.width !== W || vignette.height !== H) { vignette.width = W; vignette.height = H; }
+    vctx.setTransform(1, 0, 0, 1, 0, 0);
+    vctx.globalCompositeOperation = 'source-over';
+    vctx.shadowBlur = 0; vctx.shadowOffsetX = 0;
+    vctx.clearRect(0, 0, W, H);
+    if (amount <= 0.001) return;
+    const keyW = 202 * (window.innerWidth / 1920) * k * V_RES;
+    const blur = keyW * V_SOFT * amount;
+    vctx.save();
+    vctx.clip(new Path2D(keyholeD(k * (1 + 6 / keyW), V_RES)));   // reach a few px past the edge: no light hairline
+    vctx.fillStyle = '#0e0d0d';
+    vctx.fillRect(0, 0, W, H);
+    vctx.globalCompositeOperation = 'destination-out';
+    const inner = k * Math.max(0.2, 1 - (blur * 1.2) / keyW);   // pull the clear area in, so the very edge stays dark
+    const OFF = W * 4;                                         // draw far off-canvas, let only the blurred shadow land
+    vctx.shadowColor = '#000'; vctx.shadowBlur = blur; vctx.shadowOffsetX = OFF;
+    vctx.translate(-OFF, 0);
+    vctx.fill(new Path2D(keyholeD(inner, V_RES)));
+    vctx.restore();
+  }
+
+  // keyhole growth on a log scale (a dolly-in that keeps accelerating). At ×23 the keyhole
+  // already covers any 16:10–21:9 viewport, so the move ends there with no slow tail.
+  const K_MAX = 24;
+  const keyEase = Ease.bezier(0.5, 0, 0.7, 0.85);
+  const zoomK = (tt) => Math.pow(K_MAX, keyEase(clamp01(tt / T.zoomDur)));
+
+  /* ------------------------------------------------------------------ */
+  /* Logo                                                                 */
+  /*  BLACK / THORN: each letter = cut shape (final) + uncut shape that   */
+  /*  is masked away zone by zone while the pen writes through it.        */
+  /*  The / Coastal: revealed by pen strokes inside an SVG mask.          */
+  /* ------------------------------------------------------------------ */
+  function buildLogo(el, id) {
+    const box = 'x="-40" y="-40" width="1594" height="1032"';
+    let h = '<svg viewBox="0 0 1514 952" fill="currentColor" aria-hidden="true" focusable="false"><defs>';
+    // feathered pen tip: the leading edge of the ink fades in over a few units instead of a hard cut
+    h += '<filter id="' + id + '-feather" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="2.2"/></filter>';
+    for (const part of ['the', 'coastal']) {
+      h += '<mask id="' + id + '-m' + part + '" maskUnits="userSpaceOnUse" ' + box + '><rect ' + box + ' fill="#000"/>';
+      h += '<g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" filter="url(#' + id + '-feather)">';
+      LOGO[part].letters.forEach((letter, li) => letter.forEach((stroke, si) => stroke.forEach((c, ci) => {
+        h += '<path class="pen" data-l="' + li + '" data-s="' + si + '" data-c="' + ci + '" stroke-width="' + (c.w + 5).toFixed(1) + '" d="' + c.d + '"/>';   // +5: room for the feathered edge
+      })));
+      h += '</g><rect class="pen-full" ' + box + ' fill="#fff" opacity="0"/></mask>';
+    }
+    h += '<mask id="' + id + '-kn" maskUnits="userSpaceOnUse" ' + box + '><rect ' + box + ' fill="#fff"/>';
+    // each cut-out is wiped away by a growing clip rectangle (a mask wipe), not faded
+    LOGO.knock.forEach((k, i) => {
+      h += '<g clip-path="url(#' + id + '-kc' + i + ')"><path class="kn" data-i="' + i + '" d="' + k.d + '" fill="#000"/></g>';
+    });
+    h += '</mask>';
+    LOGO.knock.forEach((k, i) => { h += '<clipPath id="' + id + '-kc' + i + '" clipPathUnits="userSpaceOnUse"><rect class="kc" width="0" height="0"/></clipPath>'; });
+    // BLACK slides out from behind its left edge, THORN from behind its right edge
+    h += '<clipPath id="' + id + '-cb"><rect x="-1.5" y="-400" width="3000" height="2000"/></clipPath>';
+    h += '<clipPath id="' + id + '-ct"><rect x="-1500" y="-400" width="3015.5" height="2000"/></clipPath>';
+    h += '</defs>';
+    for (const w of ['black', 'thorn']) {
+      h += '<g class="w-' + w + '" clip-path="url(#' + id + (w === 'black' ? '-cb' : '-ct') + ')"><g>';
+      LOGO[w].forEach((l) => {
+        h += '<g class="lt"><path d="' + l.cut + '"/><path class="full" mask="url(#' + id + '-kn)" d="' + l.full + '"/></g>';
+      });
+      h += '</g></g>';
+    }
+    h += '<g mask="url(#' + id + '-mthe)">' + LOGO.the.fills.map((d) => '<path d="' + d + '"/>').join('') + '</g>';
+    h += '<g mask="url(#' + id + '-mcoastal)">' + LOGO.coastal.fills.map((d) => '<path d="' + d + '"/>').join('') + '</g>';
+    h += '</svg>';
+    el.insertAdjacentHTML('afterbegin', h);
+
+    const svg = el.querySelector('svg');
+    const masks = $$('mask', svg);
+    const pens = (mask) => {
+      const letters = [];
+      $$('.pen', mask).forEach((p) => {
+        const li = +p.dataset.l, si = +p.dataset.s;
+        const len = p.getTotalLength();
+        p.style.strokeDasharray = len + ' ' + (len + 60);
+        p.style.strokeDashoffset = len;
+        p.style.visibility = 'hidden';
+        ((letters[li] = letters[li] || [])[si] = letters[li][si] || []).push({ el: p, len });
+      });
+      return { letters, full: mask.querySelector('.pen-full') };
+    };
+    return {
+      black: $$('.w-black .lt', svg),
+      thorn: $$('.w-thorn .lt', svg),
+      fullBlack: $$('.w-black .full', svg),
+      fullThorn: $$('.w-thorn .full', svg),
+      knock: $$('.kc', svg),
+      the: pens(masks[0]),
+      coastal: pens(masks[1]),
+    };
+  }
+
+  /** BLACK slides in from the left, THORN from the right, they lock together.
+      No fades: each word emerges from behind an invisible edge (its clip). */
+  function scheduleWords(tl, logo, t0, dur, gap, distB = 1010, distT = 1100) {
+    const n = logo.black.length;
+    logo.black.forEach((g, i) => {
+      const at = t0 + (n - 1 - i) * 0.045;              // leading letter (K) arrives first
+      tl.add(at, dur, Ease.expoOut, (p) => g.setAttribute('transform', 'translate(' + (-(1 - p) * distB).toFixed(2) + ' 0)'));
+    });
+    logo.thorn.forEach((g, i) => {
+      const at = t0 + gap + i * 0.045;                   // leading letter (T) arrives first
+      tl.add(at, dur, Ease.expoOut, (p) => g.setAttribute('transform', 'translate(' + ((1 - p) * distT).toFixed(2) + ' 0)'));
+    });
+  }
+
+  /** handwriting at a steady hand speed (units/s); returns end time.
+      `onChunk(part, l, s, c, time)` reports when the pen starts each chunk. */
+  function scheduleScript(tl, part, t0, speed, gapStroke, gapLetter, onChunk) {
+    // One continuous hand for the whole word: every stroke and pen lift sits on a single track,
+    // so the pen never stops dead between strokes. Same total time as writing stroke by stroke.
+    // Lifts keep a brief, eased pause (expressed as "air" distance on the track).
+    const track = [];                       // { segs, from, len } for ink, { air } for lifts
+    let pos = 0, total = 0;
+    part.letters.forEach((letter, li) => {
+      letter.forEach((stroke, si) => {
+        let acc = 0;
+        const segs = stroke.map((c, ci) => { const g = { c, from: pos + acc, li, si, ci }; acc += c.len; return g; });
+        track.push({ segs, from: pos, len: acc });
+        pos += acc;
+        total += Math.max(0.06, acc / speed);
+        const lift = gapStroke + (si === letter.length - 1 ? gapLetter : 0);
+        pos += lift * speed; total += lift;          // pen in the air: covered at the same hand speed
+      });
+    });
+    const L = pos;
+    // ease in over the first ~12 %, glide at constant speed, ease out over the last ~18 %
+    const glide = (x) => {
+      const a = 0.12, b = 0.18, v = 1 / (1 - a / 2 - b / 2);
+      if (x <= 0) return 0; if (x >= 1) return 1;
+      if (x < a) return v * x * x / (2 * a);
+      if (x > 1 - b) { const y = 1 - x; return 1 - v * y * y / (2 * b); }
+      return v * (x - a / 2);
+    };
+    const inv = (d) => { let lo = 0, hi = 1; for (let k = 0; k < 30; k++) { const m2 = (lo + hi) / 2; if (glide(m2) < d) lo = m2; else hi = m2; } return (lo + hi) / 2; };
+    track.forEach((tr) => tr.segs.forEach((g) => onChunk && onChunk(g.li, g.si, g.ci, t0 + total * inv(g.from / L))));
+    tl.add(t0, total, glide, (p) => {
+      const sp = p * L;
+      for (const tr of track) for (const g of tr.segs) {
+        const drawn = Math.min(g.c.len, Math.max(0, sp - g.from));
+        g.c.el.style.strokeDashoffset = g.c.len - drawn;
+        g.c.el.style.visibility = drawn > 0.01 ? 'visible' : 'hidden';
+      }
+    });
+    const end = t0 + total;
+    tl.add(end - 0.2, 0.5, Ease.sineInOut, (p) => part.full.setAttribute('opacity', p.toFixed(3)));
+    return end;
+  }
+
+  /** bounding box of a cut-out polygon (M/L/Z path), padded a little */
+  function knockBox(d) {
+    const n = d.match(/-?\d*\.?\d+/g).map(Number);
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (let i = 0; i < n.length; i += 2) { x0 = Math.min(x0, n[i]); x1 = Math.max(x1, n[i]); y0 = Math.min(y0, n[i + 1]); y1 = Math.max(y1, n[i + 1]); }
+    x0 -= 2; y0 -= 2; x1 += 2; y1 += 2;
+    return { x0, y0, x1, y1, w: x1 - x0, h: y1 - y0, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2 };
+  }
+
+  /** full logo sequence: words, then "The", then "Coastal"; knockouts open as the pen passes */
+  function scheduleLogo(tl, logo, t0, o) {
+    scheduleWords(tl, logo, t0, o.wordDur, o.wordGap, o.distB, o.distT);
+    // wipe direction per letter: A top → bottom, C left → right, H (and the O next to it) bottom → top
+    const knockAt = (part) => (li, si, ci, time) => {
+      LOGO.knock.forEach((k, i) => {
+        if (!(k.part === part && k.l === li && k.s === si && k.c === ci)) return;
+        const b = knockBox(k.d);
+        const dir = b.cy > 490 ? 'up' : (b.cx < 560 ? 'down' : 'right');
+        const rect = logo.knock[i];
+        tl.add(time, 0.06, Ease.expoOut, (p) => {   // near-instant wipe, 3–4 frames
+          if (dir === 'down')  { rect.setAttribute('x', b.x0); rect.setAttribute('width', b.w); rect.setAttribute('y', b.y0); rect.setAttribute('height', (b.h * p).toFixed(2)); }
+          if (dir === 'up')    { rect.setAttribute('x', b.x0); rect.setAttribute('width', b.w); rect.setAttribute('y', (b.y1 - b.h * p).toFixed(2)); rect.setAttribute('height', (b.h * p).toFixed(2)); }
+          if (dir === 'right') { rect.setAttribute('y', b.y0); rect.setAttribute('height', b.h); rect.setAttribute('x', b.x0); rect.setAttribute('width', (b.w * p).toFixed(2)); }
+        });
+      });
+    };
+    const theAt = t0 + o.wordGap + o.wordDur * 0.75;
+    const theEnd = scheduleScript(tl, logo.the, theAt, o.speed, o.gapStroke, o.gapLetter, knockAt('the'));
+    // final shapes: drop the uncut letters once their script is complete
+    tl.add(theEnd - 0.1, 0.35, Ease.linear, (p) => logo.fullBlack.forEach((f) => f.setAttribute('opacity', (1 - p).toFixed(3))));
+    const end = scheduleScript(tl, logo.coastal, theEnd + 0.02, o.speed, o.gapStroke, o.gapLetter, knockAt('coastal'));
+    tl.add(end - 0.1, 0.35, Ease.linear, (p) => logo.fullThorn.forEach((f) => f.setAttribute('opacity', (1 - p).toFixed(3))));
+    return end;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Elements                                                             */
+  /* ------------------------------------------------------------------ */
+  const plUi = $('#plUi'), plFill = $('#plFill'), heroBg = $('#heroBg'), heroUi = $('#heroUi');
+  const plBg = $('.pl-bg'), grain = $('#grain');
+  const digits = $$('#plCounter .d');
+  const direct = $('#plDirect');
+  const ruler = $('#plRuler');
+  const keyOutline = $('#plKeyhole path[stroke]');
+  const slider = $('#slider');
+  const slides = $$('.slide', slider);
+  const slideImgs = slides.map((s) => s.querySelector('img'));
+  const bars = $$('#pager .bar b');
+  const book = $('#book');
+  const bookLabel = $('#bookLabel');
+  const rings = $$('.book-ring .ring', book);   // two arcs: solid end → transparent end
+
+  // ruler: stretch exactly to its box so the last tick sits at the end of the track
+  ruler.querySelector('svg').setAttribute('preserveAspectRatio', 'none');
+  const ticks = $$('path', ruler).map((p) => {
+    const base = parseFloat(p.getAttribute('stroke-opacity') || '1');
+    p.setAttribute('stroke-opacity', '1');
+    const x = parseFloat(p.getAttribute('d').slice(1));
+    return { el: p, base, x };
+  }).sort((a, b) => a.x - b.x);
+  const TICK_FIRST = ticks[0].x, TICK_LAST = ticks[ticks.length - 1].x;   // 0.25 … 1542.25
+
+  // book label → letters (hover roll)
+  const label = bookLabel.textContent;
+  bookLabel.textContent = '';
+  [...label].forEach((ch, i) => {
+    const s = document.createElement('span');
+    s.className = 'ch'; s.textContent = ch; s.dataset.c = ch; s.style.setProperty('--i', i);
+    bookLabel.appendChild(s);
+  });
+  book.setAttribute('aria-label', label);
+
+  const plLogo = buildLogo($('#plLogo'), 'pl');
+  const heroLogo = buildLogo($('#heroLogo'), 'hero');
+
+  const kOutlineLen = keyOutline.getTotalLength();
+  keyOutline.style.strokeDasharray = kOutlineLen + ' ' + kOutlineLen;
+  const ringLen = rings[0].getTotalLength();
+  rings.forEach((r) => { r.style.strokeDasharray = ringLen + ' ' + (ringLen + 10); });
+
+  slides.forEach((s, i) => { s.style.visibility = i === 0 ? 'visible' : 'hidden'; });
+
+  /* ------------------------------------------------------------------ */
+  /* Loading progress: 0 → 100 in 5 s with two short holds                */
+  /* ------------------------------------------------------------------ */
+  const PROGRESS = [
+    { d: 1.50, to: 0.38, e: Ease.power2InOut },
+    { d: 0.35, to: 0.38 },
+    { d: 1.70, to: 0.82, e: Ease.power3InOut },
+    { d: 0.25, to: 0.82 },
+    { d: 1.20, to: 1.00, e: Ease.power2InOut },
+  ];
+  function progressAt(tt) {
+    let from = 0;
+    for (const s of PROGRESS) {
+      if (tt <= s.d) return s.e ? from + (s.to - from) * s.e(clamp01(tt / s.d)) : from;
+      tt -= s.d; from = s.to;
+    }
+    return 1;
+  }
+  const pad3 = (n) => String(n).padStart(3, '0');
+  let lastCount = '';
+  const directAt = (x, sy) => 'translate3d(calc(' + x.toFixed(2) + ' * var(--u)),0,0) scaleY(' + sy + ')';
+
+  /* ------------------------------------------------------------------ */
+  /* Master timeline                                                      */
+  /* ------------------------------------------------------------------ */
+  const tl = new Timeline();
+  const tr = (el, x, y) => { el.style.transform = 'translate3d(' + x + ',' + y + ',0)'; };
+  const rise = (el, at, dur = 1.0, ease = Ease.expoOut, from = 115) =>
+    tl.add(at, dur, ease, (p) => tr(el, 0, ((1 - p) * from).toFixed(2) + '%'));
+
+  // --- 1. Preloader intro ---------------------------------------------
+  tl.add(0, 1.0, Ease.power2Out, (p) => { grain.style.opacity = p; });
+  digits.forEach((d, i) => rise(d, 0.15 + i * 0.08, 1.1));
+
+  ticks.forEach((tk) => {
+    const at = 0.25 + (tk.x / TICK_LAST) * 0.9;
+    tl.add(at, 0.45, Ease.power2Out, (p) => tk.el.setAttribute('opacity', (tk.base * p).toFixed(3)));
+  });
+
+  tl.add(0.3, 1.6, Ease.smooth, (p) => { keyOutline.style.strokeDashoffset = kOutlineLen * (1 - p); });
+
+  scheduleLogo(tl, plLogo, 0.3, { wordDur: 0.8, wordGap: 0.22, speed: 5200, gapStroke: 0.025, gapLetter: 0.015 });
+
+  // keyhole fills with white from the bottom
+  tl.add(1.85, 0.8, Ease.smooth, (p) => { plFill.style.clipPath = 'inset(' + ((1 - p) * 100).toFixed(2) + '% 0 0 0)'; });
+  tl.set(2.66, (on) => { heroBg.style.opacity = on ? 1 : 0; });       // photo waits under the white fill
+  // guide line grows on the first tick
+  tl.add(2.35, 0.6, Ease.expoOut, (p) => { direct.style.transform = directAt(TICK_FIRST, p.toFixed(4)); });
+
+  // --- 2. Loading -----------------------------------------------------
+  tl.to(T.loadStart, T.loadDur, Ease.linear, (p) => {
+    const prog = progressAt(p * T.loadDur);
+    const count = pad3(Math.round(prog * 100));
+    if (count !== lastCount) { digits.forEach((d, i) => { d.textContent = count[i]; }); lastCount = count; }
+    const mx = TICK_FIRST + prog * (TICK_LAST - TICK_FIRST);
+    direct.style.transform = directAt(mx, 1);
+    for (const tk of ticks) {
+      const k = clamp01((mx - tk.x + 1) / 24);
+      tk.el.setAttribute('opacity', (tk.base + (1 - tk.base) * k).toFixed(3));
+    }
+    plFill.style.clipPath = 'inset(' + (prog * 100).toFixed(2) + '% 0 0 0)';
+  });
+
+  // --- 3. Exit: preloader UI clears, the keyhole opens -------------------
+  digits.forEach((d, i) => tl.to(T.exit + i * 0.05, 0.75, Ease.smooth, (p) => tr(d, 0, (-p * 115).toFixed(2) + '%')));
+  tl.to(T.exit, 0.6, Ease.power2Out, (p) => { ruler.style.opacity = 1 - p; direct.style.opacity = 1 - p; });
+  tl.to(T.exit + 0.05, 0.7, Ease.smooth, (p) => {
+    const el = $('#plLogo'); el.style.opacity = 1 - p; el.style.transform = 'translate3d(0,' + (-p * 12).toFixed(2) + 'px,0)';
+  });
+  tl.to(T.exit, 0.3, Ease.power2Out, (p) => { $('#plKeyhole').style.opacity = 1 - p; });
+
+  // the keyhole is a window onto the whole first screen (background + UI)
+  tl.add(T.zoom, T.zoomDur, Ease.linear, (p) => {
+    const k = zoomK(p * T.zoomDur);
+    const cp = keyholePath(k);
+    heroBg.style.clipPath = cp; heroUi.style.clipPath = cp;
+    // the soft edge comes in as the keyhole starts to move and stays while it opens
+    const soft = reduceMotion ? 0 : Ease.power2Out(clamp01(p / 0.22));
+    vignette.style.display = p > 0 && p < 1 ? 'block' : 'none';
+    drawVignette(k, soft);
+  });
+  tl.set(T.open, (on) => {
+    if (on) { heroBg.style.clipPath = 'none'; heroUi.style.clipPath = 'none'; vignette.style.display = 'none'; }
+    plBg.style.display = plUi.style.display = plFill.style.display = on ? 'none' : '';
+    document.body.classList.toggle('is-ready', on);
+  });
+
+  // photo travels to the left half while the keyhole is still opening
+  tl.add(T.slide, T.slideDur, Ease.smooth, (p) => { slider.style.transform = 'translate3d(' + ((1 - p) * 25).toFixed(3) + 'vw,0,0)'; });
+
+  // --- 4. Hero ---------------------------------------------------------
+  // the frame lines sit in the background layer, so they are simply revealed by the keyhole;
+  // the UI layer is clipped by the same keyhole while it opens
+  tl.set(T.text, (on) => heroUi.classList.toggle('is-on', on));
+  // no lines over the photo while it sits in the keyhole: the frame shows once the keyhole starts to open,
+  // the centre line once the photo has reached the left half (it becomes the photo's right edge)
+  const frameEl = $('.frame'), midLine = $('.ln-mid');
+  tl.set(T.zoom, (on) => { frameEl.style.visibility = on ? 'visible' : 'hidden'; });
+  tl.set(T.slide + T.slideDur, (on) => { midLine.style.visibility = on ? 'visible' : 'hidden'; });
+
+  // small copy: letters materialise out of a soft blur, a wave running left → right
+  function splitChars(el) {
+    const out = [];
+    const walk = (node) => {
+      [...node.childNodes].forEach((n) => {
+        if (n.nodeType === 3) {
+          const frag = document.createDocumentFragment();
+          [...n.textContent].forEach((ch) => {
+            if (/\s/.test(ch) && !ch.trim()) { frag.appendChild(document.createTextNode(ch)); return; }
+            const s = document.createElement('span'); s.className = 'c'; s.textContent = ch; frag.appendChild(s); out.push(s);
+          });
+          n.replaceWith(frag);
+        } else if (n.nodeType === 1 && !n.classList.contains('ch')) walk(n);
+      });
+    };
+    walk(el);
+    return out;
+  }
+  function charStyle(c, p) {             // p = 0 hidden (soft blur) … 1 crisp
+    if (p >= 1) { c.style.color = ''; c.style.textShadow = ''; return; }
+    const glow = Math.sin(Math.PI * Math.min(1, p * 1.15)) * 0.75;
+    c.style.color = 'rgb(var(--rgb) / ' + p.toFixed(3) + ')';
+    c.style.textShadow = '0 0 ' + ((1 - p) * 0.55).toFixed(3) + 'em rgb(var(--rgb) / ' + glow.toFixed(3) + ')';
+  }
+  function materialise(chars, at, step = 0.016, dur = 0.85) {
+    chars.forEach((c, i) => tl.add(at + i * step, dur, Ease.outQuint, (p) => charStyle(c, p)));
+  }
+  const TX = T.text;
+  materialise(splitChars($('.est .r')), TX);
+  $$('.nav .roll').forEach((r, i) => materialise(splitChars(r), TX + 0.08 + i * 0.07));
+  materialise(splitChars($('.contact .roll')), TX + 0.12);
+  $$('.intro .r').forEach((r, i) => materialise(splitChars(r), TX + 0.2 + i * 0.06, 0.012));
+  $$('.tagline .r').forEach((r, i) => materialise(splitChars(r), TX + 0.45 + i * 0.1, 0.014));
+  materialise($$('.ch', bookLabel), TX + 0.75, 0.03, 0.9);
+
+  const cArrow = $('.contact-arrow');
+  tl.add(TX + 0.3, 0.7, Ease.outQuint, (p) => { cArrow.style.opacity = p; cArrow.style.transform = 'translate(' + ((p - 1) * 6).toFixed(2) + 'px,' + ((p - 1) * 6).toFixed(2) + 'px)'; });
+  const cLine = $('.contact-line');
+  const scaleX = (el, at, dur) => tl.add(at, dur, Ease.smooth, (p) => { el.style.transform = 'scaleX(' + p.toFixed(4) + ')'; });
+  scaleX(cLine, TX + 0.2, 0.9);
+  tl.set(TX + 1.2, (on) => {            // hand the elements over to the CSS hover styles
+    if (!on) return;
+    cLine.style.transform = ''; cLine.classList.add('is-done');
+    cArrow.style.transform = '';
+  });
+  $$('#pager .bar').forEach((b, i) => scaleX(b, TX + 0.25 + i * 0.08, 0.9));
+
+  // first screen: the words fly in from beyond the screen edges, so no clipping edge here.
+  // Distances are in logo units and clear the viewport at any width (layout scales with vw):
+  // BLACK's right edge sits ≈1113 design px from the left edge, THORN's left edge ≈1170 px from the right.
+  $$('#heroLogo .w-black, #heroLogo .w-thorn').forEach((g) => g.removeAttribute('clip-path'));
+  const heroEnd = scheduleLogo(tl, heroLogo, T.logo, { wordDur: 1.35, wordGap: 0.22, distB: 1900, distT: 2000, speed: 3500, gapStroke: 0.035, gapLetter: 0.02 });
+
+  tl.add(TX + 0.45, 1.3, Ease.smooth, (p) => { rings.forEach((r) => { r.style.strokeDashoffset = (ringLen * (1 - p)).toFixed(2); }); });
+
+  /* ------------------------------------------------------------------ */
+  /* Tagline follows the slideshow: one short line per photo              */
+  /* (edit the copy here — line 1 starts under the menu, line 2 ends at N) */
+  /* ------------------------------------------------------------------ */
+  const TAGLINES = [
+    ['quiet beauty of a world', 'forgotten by time.'],        // 1 · living room, palms beyond the glass
+    ['dinners by the water,', 'long after sunset.'],          // 2 · pavilion and pool at dusk
+    ['mornings that arrive', 'slowly, in soft light.'],      // 3 · bedroom, morning sun on the wall
+  ];
+  const tagLines = $$('.tagline .r');
+  let tagIdx = 0, tagChars = null, tagSettled = true;
+  function setTagline(i) {
+    if (i === tagIdx && tagChars) return tagChars;
+    tagIdx = i; tagChars = [];
+    tagLines.forEach((r, li) => {
+      r.textContent = '';
+      [...TAGLINES[i][li]].forEach((ch) => {
+        if (ch === ' ') { r.appendChild(document.createTextNode(' ')); return; }
+        const sp = document.createElement('span'); sp.className = 'c'; sp.textContent = ch; r.appendChild(sp); tagChars.push(sp);
+      });
+    });
+    return tagChars;
+  }
+  const TAG_OUT = 0.35, TAG_IN = 0.3, TAG_DUR = 0.85, TAG_STEP = 0.013;
+  function renderTagline(k, cur, prev, local) {
+    if (k === 0) return;                                  // first photo: the intro handles it
+    if (local < TAG_IN) {                                 // old line dissolves, wave left → right
+      const chars = setTagline(prev);
+      chars.forEach((c, i) => charStyle(c, 1 - Ease.power2Out(clamp01((local - i * 0.006) / TAG_OUT))));
+      tagSettled = false;
+    } else if (local < TAG_IN + TAG_DUR + 45 * TAG_STEP) { // new line materialises
+      const chars = setTagline(cur);
+      chars.forEach((c, i) => charStyle(c, Ease.outQuint(clamp01((local - TAG_IN - i * TAG_STEP) / TAG_DUR))));
+      tagSettled = false;
+    } else if (!tagSettled || tagIdx !== cur) {
+      setTagline(cur).forEach((c) => charStyle(c, 1));
+      tagSettled = true;
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Slideshow: 4 s per slide, wipe from left to right                    */
+  /* ------------------------------------------------------------------ */
+  const SLIDE = 4, TRANS = 1.3, N = slides.length;
+  const revealEase = Ease.expoInOut, zoomEase = Ease.outQuint;
+  let sliderIdle = false;
+  function renderSlider(t) {
+    const ts = t - T.slider;
+    if (ts < 0) {
+      if (!sliderIdle) { bars.forEach((b) => { b.style.transform = 'scaleX(0)'; b.style.opacity = 1; }); sliderIdle = true; }
+      return;
+    }
+    sliderIdle = false;
+    const k = Math.floor(ts / SLIDE), cur = k % N, prev = (k - 1 + N) % N;
+    const local = ts - k * SLIDE;
+    const inTrans = k > 0 && local < TRANS;
+    renderTagline(k, cur, prev, local);
+    slides.forEach((s, i) => {
+      const show = i === cur || (inTrans && i === prev);
+      s.style.visibility = show ? 'visible' : 'hidden';
+      s.style.zIndex = i === cur ? 2 : 1;
+      if (i === cur) {
+        const p = k === 0 ? 1 : clamp01(local / TRANS);
+        const e = revealEase(p);
+        s.style.clipPath = p >= 1 ? 'none' : 'inset(0 ' + ((1 - e) * 100).toFixed(2) + '% 0 0)';
+        slideImgs[i].style.transform = p >= 1 ? '' : 'translate3d(' + (-6 * (1 - e)).toFixed(3) + '%,0,0) scale(' + (1 + 0.1 * (1 - zoomEase(p))).toFixed(4) + ')';
+      } else if (show) {
+        s.style.clipPath = 'none';
+        slideImgs[i].style.transform = 'translate3d(' + (8 * revealEase(clamp01(local / TRANS))).toFixed(3) + '%,0,0)';
+      }
+    });
+    bars.forEach((b, i) => {
+      if (i === cur) { b.style.transform = 'scaleX(' + (local / SLIDE).toFixed(4) + ')'; b.style.opacity = 1; }
+      else if (i === prev && k > 0 && local < 0.5) { b.style.transform = 'scaleX(1)'; b.style.opacity = (1 - local / 0.5).toFixed(3); }
+      else { b.style.transform = 'scaleX(0)'; }
+    });
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Grain (Figma: mono noise, size 0.5, density 100 %) — softened        */
+  /* ------------------------------------------------------------------ */
+  const GRAIN_ALPHA = 14;      // max alpha of a grain dot, 0–255 (≈5.5 %)
+  const GRAIN_FPS = 8;
+  const TILE = 256;
+  let grainURL = '', grainFrame = -1;
+  function makeGrain() {
+    const c = document.createElement('canvas'); c.width = c.height = TILE;
+    const x = c.getContext('2d'), img = x.createImageData(TILE, TILE), d = img.data;
+    for (let i = 0; i < d.length; i += 4) { d[i] = 240; d[i + 1] = 239; d[i + 2] = 235; d[i + 3] = Math.random() * GRAIN_ALPHA; }
+    x.putImageData(img, 0, 0);
+    grainURL = 'url(' + c.toDataURL('image/png') + ')';
+    grain.style.backgroundImage = grainURL;
+    sizeGrain();
+  }
+  function sizeGrain() {
+    // one grain dot per device pixel (Figma "size 0.5" on a 2× screen)
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    grain.style.backgroundSize = (TILE / dpr) + 'px ' + (TILE / dpr) + 'px';
+  }
+  // film grain: shift the tile to a new random offset a few times per second
+  const offsets = Array.from({ length: 12 }, () => [Math.floor(Math.random() * TILE), Math.floor(Math.random() * TILE)]);
+  function drawGrain(t) {
+    if (plBg.style.display === 'none') return;
+    const f = Math.floor(Math.max(0, t) * GRAIN_FPS) % offsets.length;
+    if (f === grainFrame) return;
+    grainFrame = f;
+    grain.style.backgroundPosition = offsets[f][0] + 'px ' + offsets[f][1] + 'px';
+  }
+  makeGrain();
+
+  /* ------------------------------------------------------------------ */
+  /* Book your stay: magnetic pull                                         */
+  /* ------------------------------------------------------------------ */
+  const mag = { x: 0, y: 0, tx: 0, ty: 0 };
+  const labelBox = $('.book-label', book);
+  window.addEventListener('pointermove', (e) => {
+    const r = book.getBoundingClientRect();
+    const cx = r.left + r.width / 2 - mag.x, cy = r.top + r.height / 2 - mag.y;
+    const dx = e.clientX - cx, dy = e.clientY - cy;
+    if (Math.hypot(dx, dy) < r.width * 0.75 && heroUi.classList.contains('is-on')) { mag.tx = dx * 0.16; mag.ty = dy * 0.16; }
+    else { mag.tx = 0; mag.ty = 0; }
+  }, { passive: true });
+  book.addEventListener('pointerleave', () => { mag.tx = 0; mag.ty = 0; });
+  function renderMagnet() {
+    mag.x += (mag.tx - mag.x) * 0.14; mag.y += (mag.ty - mag.y) * 0.14;
+    if (Math.abs(mag.x) < 0.01 && Math.abs(mag.y) < 0.01 && !mag.tx && !mag.ty) { book.style.transform = ''; labelBox.style.transform = ''; return; }
+    book.style.transform = 'translate3d(' + mag.x.toFixed(2) + 'px,' + mag.y.toFixed(2) + 'px,0)';
+    labelBox.style.transform = 'translate3d(' + (mag.x * 0.6).toFixed(2) + 'px,' + (mag.y * 0.6).toFixed(2) + 'px,0)';
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Cursor: dot follows the pointer, the ring trails it and stretches    */
+  /* slightly along the direction of travel                               */
+  /* ------------------------------------------------------------------ */
+  const cursor = $('#cursor');
+  const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const cur = { x: -100, y: -100, rx: -100, ry: -100, seen: false };
+  const cDot = $('.cursor-dot', cursor), cRing = $('.cursor-ring', cursor);
+  if (finePointer) {
+    root.classList.add('has-cursor');
+    cursor.classList.add('is-hidden');
+    window.addEventListener('pointermove', (e) => {
+      cur.x = e.clientX; cur.y = e.clientY;
+      if (!cur.seen) { cur.rx = cur.x; cur.ry = cur.y; cur.seen = true; cursor.classList.remove('is-hidden'); }
+    }, { passive: true });
+    document.addEventListener('pointerleave', () => cursor.classList.add('is-hidden'));
+    document.addEventListener('pointerenter', () => { if (cur.seen) cursor.classList.remove('is-hidden'); });
+    window.addEventListener('pointerdown', () => cursor.classList.add('is-down'));
+    window.addEventListener('pointerup', () => cursor.classList.remove('is-down'));
+    document.addEventListener('pointerover', (e) => {
+      const t = e.target instanceof Element ? e.target : null;
+      cursor.classList.toggle('is-book', !!(t && t.closest('.book')));
+      cursor.classList.toggle('is-link', !!(t && t.closest('a:not(.book), button')));
+    });
+  }
+  function renderCursor() {
+    if (!finePointer || !cur.seen) return;
+    const k = reduceMotion ? 1 : 0.16;
+    const dx = cur.x - cur.rx, dy = cur.y - cur.ry;
+    cur.rx += dx * k; cur.ry += dy * k;
+    cDot.style.transform = 'translate3d(' + cur.x.toFixed(1) + 'px,' + cur.y.toFixed(1) + 'px,0)';
+    const speed = Math.min(Math.hypot(dx, dy) / 160, 1);
+    const onBook = cursor.classList.contains('is-book');
+    const stretch = reduceMotion || onBook ? 0 : speed * 0.22;
+    const ang = onBook ? 0 : Math.atan2(dy, dx) * 180 / Math.PI;
+    cRing.style.transform = 'translate3d(' + cur.rx.toFixed(1) + 'px,' + cur.ry.toFixed(1) + 'px,0) rotate(' + ang.toFixed(1) + 'deg) scale(' + (1 + stretch).toFixed(3) + ',' + (1 - stretch * 0.6).toFixed(3) + ')';
+    // ink on the paper half once the first screen is in place, light on the photo and on the preloader
+    const onPaper = document.body.classList.contains('is-ready') && cur.x > window.innerWidth / 2;
+    cursor.classList.toggle('is-ink', onPaper);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Clock                                                                */
+  /* ------------------------------------------------------------------ */
+  let ready = false;
+  Promise.all(slideImgs.map((img) => (img.decode ? img.decode().catch(() => {}) : Promise.resolve())))
+    .then(() => { ready = true; });
+  setTimeout(() => { ready = true; }, 12000);   // never hang on a slow network
+
+  const frozen = qs.has('t') ? parseFloat(qs.get('t')) : null;
+  const speed = parseFloat(qs.get('speed')) || 1;
+  let t = 0;
+  if (qs.has('skip') || reduceMotion) t = heroEnd + 0.5;
+  if (frozen !== null) t = frozen;
+
+  const clipNow = () => {
+    if (t >= T.open) return 'none';
+    return keyholePath(t <= T.zoom ? 1 : zoomK(t - T.zoom));
+  };
+  window.addEventListener('resize', () => {
+    sizeGrain();
+    const cp = clipNow(); heroBg.style.clipPath = cp; heroUi.style.clipPath = cp;
+  });
+
+  function render() {
+    tl.render(t);
+    renderSlider(t);
+    drawGrain(t);
+  }
+  window.__bt = { seek(v) { t = v; render(); }, T, get t() { return t; }, end: heroEnd };
+
+  let last = performance.now();
+  function frame(now) {
+    let dt = Math.min(0.1, Math.max(0, (now - last) / 1000)) * speed;
+    last = now;
+    if (frozen === null) {
+      if (!ready && t + dt >= T.exit) dt = Math.max(0, T.exit - t);   // hold at 100 until photos are decoded
+      t += dt;
+    }
+    render();
+    renderMagnet();
+    renderCursor();
+    requestAnimationFrame(frame);
+  }
+  render();
+  requestAnimationFrame(frame);
+})();
+
+</script>
+
+</body></html>
