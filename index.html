@@ -91,6 +91,9 @@ img { display: block; }
   will-change: transform, opacity;
 }
 
+.pl-streaks { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.pl-streaks i { position: absolute; left: 0; top: 0; display: block; opacity: 0; will-change: transform, opacity; }
+
 .pl-counter {
   position: absolute; left: calc(30 * var(--u)); bottom: calc(30 * var(--u));
   display: flex;
@@ -365,6 +368,7 @@ img { display: block; }
 <div class="pl-fill" id="plFill" aria-hidden="true"></div>
 <div class="pl-ui" id="plUi" aria-hidden="true">
   <div class="pl-keyhole" id="plKeyhole"><svg width="202" height="405" viewBox="0 0 202 405" fill="none" xmlns="http://www.w3.org/2000/svg"><mask id="stroke0_214_2784" fill="white"><path d="M202 101.132C202 83.0026 197.134 65.2067 187.909 49.6069C178.685 34.0071 165.442 21.1769 149.567 12.4594C133.692 3.74185 115.768 -0.542453 97.6719 0.0549307C79.5759 0.652315 61.9729 6.10941 46.7057 15.855C31.4385 25.6006 19.0684 39.2763 10.8902 55.4506C2.71202 71.625 -0.973469 89.7031 0.219508 107.793C1.41248 125.882 7.44006 143.318 17.6713 158.276C27.9025 173.233 41.9612 185.161 58.3757 192.812L11.4231 404.918L110.04 405L190.536 404.918L143.665 192.812C161.096 184.676 175.846 171.726 186.179 155.486C196.513 139.245 202.002 120.388 202 101.132Z"/></mask><path d="M202 101.132C202 83.0026 197.134 65.2067 187.909 49.6069C178.685 34.0071 165.442 21.1769 149.567 12.4594C133.692 3.74185 115.768 -0.542453 97.6719 0.0549307C79.5759 0.652315 61.9729 6.10941 46.7057 15.855C31.4385 25.6006 19.0684 39.2763 10.8902 55.4506C2.71202 71.625 -0.973469 89.7031 0.219508 107.793C1.41248 125.882 7.44006 143.318 17.6713 158.276C27.9025 173.233 41.9612 185.161 58.3757 192.812L11.4231 404.918L110.04 405L190.536 404.918L143.665 192.812C161.097 184.676 175.846 171.726 186.179 155.486C196.513 139.245 202.002 120.388 202 101.132Z" stroke-width="4" stroke="#F0EFEB" mask="url(#stroke0_214_2784)"/></svg></div>
+  <div class="pl-streaks" id="plStreaks"></div>
   <div class="pl-logo logo" id="plLogo"></div>
   <div class="pl-counter" id="plCounter"><span class="m"><span class="d">0</span></span><span class="m"><span class="d">0</span></span><span class="m"><span class="d">0</span></span></div>
   <div class="pl-direct" id="plDirect"></div>
@@ -539,8 +543,8 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
                           first screen, the logo drawn there */
   const INTRO = qs.get('intro') === 'keyhole' ? 'keyhole' : 'center';
   const CENTER = INTRO === 'center';
-  const T = CENTER ? { loadStart: 0.6, loadDur: 4.0 } : { loadStart: 3.0, loadDur: 5.0 };
-  T.exit = T.loadStart + T.loadDur;          // keyhole: 8.0 · center: 4.6   counter at 100, preloader UI leaves
+  const T = CENTER ? { loadStart: 0.6, loadDur: 6.0 } : { loadStart: 3.0, loadDur: 5.0 };
+  T.exit = T.loadStart + T.loadDur;          // keyhole: 8.0 · center: 6.6   counter at 100, preloader UI leaves
   T.zoom = T.exit;
   T.zoomDur = 1.3;
   T.curtain = T.exit + 0.1;                  // center: the dark ground lifts
@@ -738,6 +742,10 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     guidesFor(opts.reachH, opts.reachV).forEach((g) => { h += '<path class="gd" d="' + g + '" visibility="hidden"/>'; });
     if (opts.cropMarks) CROP.forEach((g) => { h += '<path class="cm" d="' + g + '" visibility="hidden"/>'; });
     h += '</g>';
+    // flashes along the mark: short slices that race round the silhouette ahead of the pencil and vanish
+    h += '<g class="mark-comets" fill="none" stroke="currentColor" stroke-width="' + (olw * 1.6).toFixed(2) + '" stroke-linecap="round">';
+    LOGO.mark.forEach((d) => { h += '<path class="mtr" d="' + d + '" visibility="hidden"/>'; });
+    h += '</g>';
     for (const part of ['the', 'coastal']) {
       h += '<g mask="url(#' + id + '-m' + part + ')">' + LOGO[part].fills.map((d) => '<path d="' + d + '"/>').join('') + '</g>';
       // comets: a short, thin slice of light runs along the stroke's own centre line before it is written
@@ -782,7 +790,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
         if (score > best) { best = score; s0 = at; }
       }
       pp.style.visibility = 'hidden';
-      return { el: pp, len, s0 };
+      return { el: pp, len, s0, s0y: pp.getPointAtLength(s0).y };
     });
     const longest = Math.max(...outs.map((o) => o.len));
     outs.forEach((o) => { o.outer = o.len === longest; });
@@ -792,6 +800,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     return {
       guides: $$('.gd', svg).map((g) => ({ el: g, len: g.getTotalLength() })),
       crop: $$('.cm', svg).map((g) => ({ el: g, len: g.getTotalLength() })),
+      markComets: $$('.mtr', svg).map((g) => ({ el: g, len: g.getTotalLength() })),
       mark: { outs, outline: svg.querySelector('.mark-ol'), grad: svg.querySelector('.ig'), y0: mb.y0, y1: mb.y1 },
       cuts: $$('.kc', svg),
       the: pens('the'),
@@ -801,6 +810,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
 
   const GUIDE_IN = Ease.bezier(0.16, 1, 0.3, 1), GUIDE_OUT = Ease.bezier(0.6, 0, 0.8, 0.6);
   const DRAW_EASE = Ease.bezier(0.62, 0, 0.18, 1);
+  const PENCIL_EASE = Ease.bezier(0.42, 0.05, 0.58, 0.95);   // a steady hand: soft start and finish, even in between
 
   /** BLACK / THORN: the construction grid shoots out from the K / H joint; the letters are traced on it,
       every contour opening both ways from its lowest point; the ink rises close behind the lines; then
@@ -829,7 +839,35 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
         g.el.style.strokeDasharray = b.toFixed(2) + ' ' + (g.len + 10);
       });
     });
-    M.outs.forEach((s) => {
+    if (o.pencil) {
+      // pencil: one tip per contour, travelling one way round at a steady hand speed; the silhouette goes
+      // first, the counters are drawn one after another while it travels
+      const outer = M.outs.filter((s) => s.outer), inner = M.outs.filter((s) => !s.outer).sort((a, b) => a.s0y - b.s0y);
+      const speed = Math.max(...outer.map((s) => s.len)) / o.drawDur;
+      const pencil = (s, at, dur) => tl.add(at, dur, PENCIL_EASE, (p) => {
+        const d = s.len * p;
+        if (d < 0.5) { s.el.style.visibility = 'hidden'; return; }
+        s.el.style.visibility = 'visible';
+        s.el.style.strokeDasharray = p >= 1 ? 'none' : d.toFixed(2) + ' ' + (s.len - d + 0.01).toFixed(2);
+        s.el.style.strokeDashoffset = (-s.s0).toFixed(2);
+      });
+      outer.forEach((s) => pencil(s, t0 + o.drawAt, Math.max(0.8, s.len / speed)));
+      inner.forEach((s, k) => pencil(s, t0 + o.drawAt + o.innerDelay + k * o.innerGap, Math.min(1.5, Math.max(0.7, (s.len / speed) * 1.6))));
+      // flashes: quick slices racing round the silhouette, ahead of the pencil
+      const mc = logo.markComets.slice().sort((a, b) => b.len - a.len);
+      for (let k = 0; k < (o.markComets || 0); k++) {
+        const g = mc[k % Math.min(mc.length, 4)], L = g.len;
+        const from = L * ((k * 0.37) % 1), run = Math.min(L * 0.45, 900), seg = Math.min(150, run * 0.3);
+        tl.add(t0 + o.drawAt + 0.15 + k * o.markCometGap, 0.34, COMET_EASE, (p) => {
+          const head = p * (run + seg), a = Math.max(0, head - seg), b = Math.min(run, head);
+          if (p <= 0 || p >= 1 || b - a < 0.5) { g.el.setAttribute('visibility', 'hidden'); return; }
+          g.el.setAttribute('visibility', 'visible');
+          g.el.style.strokeDasharray = (b - a).toFixed(1) + ' ' + (L - (b - a) + 0.01).toFixed(1);
+          g.el.style.strokeDashoffset = (-((from + a) % L)).toFixed(1);
+          g.el.setAttribute('opacity', Math.min(1, (1 - p) * 4).toFixed(3));
+        });
+      }
+    } else M.outs.forEach((s) => {
       const at = t0 + o.drawAt + (s.outer ? 0 : o.innerDelay), dur = o.drawDur - (s.outer ? 0 : o.innerDelay);
       tl.add(at, dur, DRAW_EASE, (p) => {
         const a = (s.len / 2) * p;                      // half-length drawn on each side of the start point
@@ -973,7 +1011,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   }
   // centred: the grid runs right across the screen (logo units; the screen is ~1550 units either side)
   const plLogo = CENTER
-    ? buildLogo($('#plLogo'), 'pl', { outlinePx: 1.5, logoPx: 939.2, reachH: 1700, reachV: 900, cropMarks: true })
+    ? buildLogo($('#plLogo'), 'pl', { outlinePx: 1.5, logoPx: 939.2, cropMarks: true })
     : buildLogo($('#plLogo'), 'pl', { outlinePx: 1, logoPx: 294 });
   const heroLogo = buildLogo($('#heroLogo'), 'hero', { outlinePx: 1.5, logoPx: 939.2 });
 
@@ -1028,7 +1066,12 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
 
   const HERO_LOGO_OPTS = { guideIn: 0.6, guideOut: 1.0, guideOutDur: 0.55, drawAt: 0.15, drawDur: 1.05, innerDelay: 0.18, fillDelay: 0.42, fillDur: 1.0, scriptOverlap: 0.13, stagger: 0.055, pace: 0.95, coastalLag: 0.36, cut: 0.28, prelude: 0.34, comets: 6, cometGap: 0.065, cometDur: 0.32 };
   // centred: the full-size drawing, with the grid given a little longer to cross the screen
-  if (CENTER) scheduleLogo(tl, plLogo, 0.5, Object.assign({}, HERO_LOGO_OPTS, { guideIn: 0.85, guideOut: 1.25, guideOutDur: 0.75 }));
+  // centred: drawn slowly, like a pencil, with flashes racing round the mark ahead of it
+  if (CENTER) scheduleLogo(tl, plLogo, 0.5, Object.assign({}, HERO_LOGO_OPTS, {
+    guideIn: 0.9, guideOut: 3.0, guideOutDur: 0.8,
+    pencil: true, drawAt: 0.35, drawDur: 2.9, innerDelay: 0.9, innerGap: 0.28,
+    fillDelay: 2.55, fillDur: 1.25, markComets: 7, markCometGap: 0.36,
+  }));
   else scheduleLogo(tl, plLogo, 0.3, { guideIn: 0.5, guideOut: 0.85, guideOutDur: 0.5, drawAt: 0.12, drawDur: 0.95, innerDelay: 0.15, fillDelay: 0.38, fillDur: 0.95, scriptOverlap: 0.1, stagger: 0.045, pace: 0.72, coastalLag: 0.3, cut: 0.24, prelude: 0.28, comets: 5, cometGap: 0.055, cometDur: 0.28 });
 
   // keyhole fills with white from the bottom
@@ -1036,6 +1079,39 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   tl.set(CENTER ? T.exit : 2.66, (on) => { heroBg.style.opacity = on ? 1 : 0; });   // photo waits under the white fill / the curtain
   // guide line grows on the first tick
   tl.add(CENTER ? T.loadStart - 0.35 : 2.35, 0.6, Ease.expoOut, (p) => { direct.style.transform = directAt(TICK_FIRST, p.toFixed(4)); });
+
+  // flashes across the whole screen: thin streaks shoot along the lines the first screen is built on
+  // (its margins, the centre line, the menu column, the logo's grid) and are gone at once
+  if (CENTER) {
+    const box = $('#plStreaks');
+    let seed = 7;
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+    const LY = 244.8, LU = 939.2 / 1514;                       // logo top and logo unit, design px
+    const H = [30, 1050, LY + 231.7 * LU, LY + 486 * LU, LY + 740.4 * LU, 168, 912];
+    const V = [30, 348, 960, 1213, 1890, 659];
+    const streaks = [];
+    for (let k = 0, at = 0.45; at < T.exit - 0.35; k++) {
+      const hor = rnd() < 0.62, list = hor ? H : V, pos = list[Math.floor(rnd() * list.length)];
+      const span = hor ? 1920 : 1080, len = 110 + rnd() * 220, fwd = rnd() < 0.5;
+      const a = rnd() * span * 0.35, b = span * (0.65 + rnd() * 0.35);
+      streaks.push({ hor, pos, len, from: fwd ? a - len : b, to: fwd ? b : a - len, fwd, at, dur: 0.32 + rnd() * 0.18 });
+      at += rnd() < 0.3 ? 0.08 : 0.22 + rnd() * 0.3;              // now and then two in quick succession
+    }
+    streaks.forEach((st) => {
+      const el = document.createElement('i');
+      const grad = 'linear-gradient(' + (st.hor ? (st.fwd ? '90deg' : '270deg') : (st.fwd ? '180deg' : '0deg')) + ', rgb(240 239 235 / 0), rgb(240 239 235 / .9))';
+      el.style.background = grad;
+      box.appendChild(el);
+      tl.add(st.at, st.dur, COMET_EASE, (p) => {
+        const u = window.innerWidth / 1920;
+        if (st.hor) { el.style.width = (st.len * u).toFixed(1) + 'px'; el.style.height = '1px'; }
+        else { el.style.width = '1px'; el.style.height = (st.len * u).toFixed(1) + 'px'; }
+        const run = (st.from + (st.to - st.from) * p) * u, fixed = st.pos * u;
+        el.style.transform = st.hor ? 'translate3d(' + run.toFixed(1) + 'px,' + fixed.toFixed(1) + 'px,0)' : 'translate3d(' + fixed.toFixed(1) + 'px,' + run.toFixed(1) + 'px,0)';
+        el.style.opacity = (p <= 0 || p >= 1 ? 0 : Math.min(1, Math.sin(Math.PI * p) * 1.8) * 0.7).toFixed(3);
+      });
+    });
+  }
 
   // --- 2. Loading -----------------------------------------------------
   tl.to(T.loadStart, T.loadDur, Ease.linear, (p) => {
