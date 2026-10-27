@@ -1087,7 +1087,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
      makes it read as running film. Gaussian mono noise, one grain per photo pixel, a new frame at
      film rate; offsets come from a hash of the frame number, so the pattern never loops. */
   const sGrain = $('#sliderGrain');
-  const SG = { tile: 512, fps: 18, amount: 0.22, sigma: 0.15, soft: 0.45 };   // strength · noise spread · grain softness (px)
+  const SG = { tile: 512, fps: 12, amount: 0.16, sigma: 0.15, soft: 0 };   // strength · noise spread · grain softness (px)
   (function makeSliderGrain() {
     const c = document.createElement('canvas'); c.width = c.height = SG.tile;
     const x = c.getContext('2d'), img = x.createImageData(SG.tile, SG.tile), d = img.data;
@@ -1101,16 +1101,15 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     // Drawn 3×3 so the blur wraps around the tile edges and the tile stays seamless.
     const out = document.createElement('canvas'); out.width = out.height = SG.tile;
     const o = out.getContext('2d');
-    o.filter = 'blur(' + SG.soft + 'px)';
+    if (SG.soft) o.filter = 'blur(' + SG.soft + 'px)';
     for (let ty = -1; ty <= 1; ty++) for (let tx = -1; tx <= 1; tx++) o.drawImage(c, tx * SG.tile, ty * SG.tile);
     sGrain.style.backgroundImage = 'url(' + out.toDataURL('image/png') + ')';
   })();
   function sizeSliderGrain() {
-    // photos are 960 px wide and fill the slider: match the grain to their pixel size
-    // snapped to whole or half steps: a tile scaled by 0.999 would be resampled and lose its crisp grain
-    const px = Math.max(1, Math.round((slider.getBoundingClientRect().width / 960 || 1) * 2) / 2);
-    sGrain.style.backgroundSize = (SG.tile * px).toFixed(2) + 'px';
-    sGrain.dataset.px = px;
+    // fine grain: one grain per device pixel (a tile pixel maps onto exactly one screen pixel)
+    const dpr = window.devicePixelRatio || 1;
+    sGrain.style.backgroundSize = (SG.tile / dpr) + 'px';
+    sGrain.dataset.dpr = dpr;
   }
   sizeSliderGrain();
   let sgFrame = -1;
@@ -1120,9 +1119,10 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     const f = reduceMotion ? 0 : Math.floor(Math.max(0, t) * SG.fps);
     if (f === sgFrame) return;
     sgFrame = f;
-    const px = +sGrain.dataset.px || 1, h = hash(f + 1);
-    const ox = Math.round((h & 0xffff) / 0xffff * SG.tile * px), oy = Math.round((h >>> 16) / 0xffff * SG.tile * px);
-    sGrain.style.transform = 'translate3d(' + (ox % 512) + 'px,' + (oy % 512) + 'px,0)';
+    const dpr = +sGrain.dataset.dpr || 1, h = hash(f + 1);
+    // offsets in whole device pixels, so the grain stays pin-sharp
+    const ox = Math.floor((h & 0xffff) / 0x10000 * SG.tile) / dpr, oy = Math.floor((h >>> 16) / 0x10000 * SG.tile) / dpr;
+    sGrain.style.transform = 'translate3d(' + ox + 'px,' + oy + 'px,0)';
   }
 
   /* ------------------------------------------------------------------ */
