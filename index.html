@@ -1006,6 +1006,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     const dpr = window.devicePixelRatio || 1, w = Math.max(1, Math.round(u * dpr));
     return { c: (Math.round(v * u * dpr - w / 2) + w / 2) / dpr, w: w / dpr };
   };
+  const PL_GRID = false;                        // centred intro: full-length guide lines on / off
   const RULER_TALL = new Set([132, 154, 396, 418, 660, 682, 924, 946, 1188, 1210, 1452, 1474]);
   let plGrid = null;
   if (CENTER) {
@@ -1045,7 +1046,9 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     hy.forEach((s) => { d.push(['M' + jx + ' ' + s.c + 'H-20', s.w], ['M' + jx + ' ' + s.c + 'H' + (W + 20), s.w]); });
     vx.forEach((s) => { d.push(['M' + s.c + ' ' + jy + 'V-20', s.w], ['M' + s.c + ' ' + jy + 'V' + (H + 20), s.w]); });
     $$('path', plGrid).forEach((p, i) => { p.setAttribute('d', d[i][0]); p.setAttribute('stroke-width', d[i][1]); });
-    if (plLogo) plLogo.guides = $$('path', plGrid).map((g) => ({ el: g, len: g.getTotalLength() }));
+    // the full-length guide lines are switched off for now (set PL_GRID = true to bring them back)
+    plLogo.guides = PL_GRID ? $$('path', plGrid).map((g) => ({ el: g, len: g.getTotalLength() })) : [];
+    plGrid.style.display = PL_GRID ? '' : 'none';
   }
   // ruler: stretch exactly to its box so the last tick sits at the end of the track
   ruler.querySelector('svg').setAttribute('preserveAspectRatio', 'none');
