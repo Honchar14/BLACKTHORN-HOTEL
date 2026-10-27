@@ -1443,13 +1443,12 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
 
   /* ------------------------------------------------------------------ */
   /* First screen: a quiet echo of the preloader. Each time the photo      */
-  /* changes, two hairlines in the logo's handwriting flick along their    */
-  /* curve and fade: a light one on the photo, an ink one on the paper.    */
+  /* changes, a hairline in the logo's handwriting flicks along its curve  */
+  /* and fades, on the paper half only (right of the logo).                */
   /* Placed in the empty areas only; nothing else moves.                   */
   /* ------------------------------------------------------------------ */
   const HF = { delay: 0.55, dur: 0.95, gap: 0.25 };   // after the wipe starts · length of one flick · between the two
   const HF_ZONES = [
-    { x0: 70, x1: 400, y0: 110, y1: 560, color: '#F0EFEB', alpha: 0.8 },     // photo, top left (clear of the logo)
     { x0: 1480, x1: 1850, y0: 190, y1: 700, color: '#0E0D0D', alpha: 0.55 },  // paper, right of the logo
   ];
   const hfSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
