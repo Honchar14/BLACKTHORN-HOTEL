@@ -1447,7 +1447,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   /* and fades, on the paper half only (right of the logo).                */
   /* Placed in the empty areas only; nothing else moves.                   */
   /* ------------------------------------------------------------------ */
-  const HF = { delay: 0.55, dur: 0.95, gap: 0.25 };   // after the wipe starts · length of one flick · between the two
+  const HF = { delay: 0.55, dur: 0.95, gap: 0.25, every: SLIDE / 2 };   // a flick on each photo change and one halfway between   // after the wipe starts · length of one flick · between the two
   const HF_ZONES = [
     { x0: 1480, x1: 1850, y0: 190, y1: 700, color: '#0E0D0D', alpha: 0.55 },  // paper, right of the logo
   ];
@@ -1469,8 +1469,8 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     const ts = t - T.slider;
     hfPaths.forEach((hp, i) => {
       const z = HF_ZONES[i], off = HF.delay + i * HF.gap;
-      const k = Math.floor((ts - off) / SLIDE), local = ts - off - k * SLIDE;
-      if (reduceMotion || k < 1 || local < 0 || local > HF.dur) { hp.el.setAttribute('visibility', 'hidden'); return; }
+      const k = Math.floor((ts - off) / HF.every), local = ts - off - k * HF.every;
+      if (reduceMotion || k * HF.every < SLIDE || local < 0 || local > HF.dur) { hp.el.setAttribute('visibility', 'hidden'); return; }
       const r = hfRnd(k, i);
       if (hp.k !== k) {                      // a new flick: new shape, place, size and angle
         hp.k = k;
