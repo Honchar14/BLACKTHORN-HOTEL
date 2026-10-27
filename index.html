@@ -1442,53 +1442,83 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   }
 
   /* ------------------------------------------------------------------ */
-  /* First screen: a quiet echo of the preloader. Each time the photo      */
-  /* changes, a hairline in the logo's handwriting flicks along its curve  */
-  /* and fades, on the paper half only (right of the logo).                */
-  /* Placed in the empty areas only; nothing else moves.                   */
+  /* First screen: painted letters. Every ~0.9 s a letter of the logo's    */
+  /* script (C, o, a, s, t, l, The) is written somewhere on the paper half */
+  /* with its own thick-and-thin pen strokes, holds a moment and fades.    */
+  /* Placed in the empty areas only (clear of the logo, menu, tagline,     */
+  /* A Quiet Escape and the Book button).                                  */
   /* ------------------------------------------------------------------ */
-  const HF = { delay: 0.55, dur: 0.95, gap: 0.25, every: SLIDE / 2 };   // a flick on each photo change and one halfway between   // after the wipe starts · length of one flick · between the two
-  const HF_ZONES = [
-    { x0: 1480, x1: 1850, y0: 190, y1: 700, color: '#0E0D0D', alpha: 0.55 },  // paper, right of the logo
+  const HF = { start: 0.6, every: 0.9, write: 0.75, hold: 0.25, fade: 0.65, slots: 3, alpha: 0.7 };
+  const HF_AREA = { x0: 990, x1: 1890, y0: 40, y1: 1050 };            // the paper half, design px
+  const HF_KEEP_OUT = [                                                  // design px, with a little air
+    [1190, 10, 1365, 165], [1755, 10, 1910, 75], [1190, 465, 1575, 545], [1190, 1015, 1375, 1070],
+    [1615, 775, 1910, 1070],
+    [940, 160, 1060, 425], [940, 375, 1450, 720], [940, 660, 1490, 925],   // The · BLACK THORN · Coastal
   ];
+  // glyphs: each letter of the script as its pen strokes (centre lines with the pen's width)
+  const GLYPHS = [];
+  for (const part of ['the', 'coastal']) LOGO[part].letters.forEach((letter) => {
+    const chunks = [];
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity, len = 0;
+    letter.forEach((stroke) => stroke.forEach((c) => {
+      const pts = polyPoints(c.d);
+      let l = 0; for (let i = 1; i < pts.length; i++) l += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+      pts.forEach(([x, y]) => { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); });
+      chunks.push({ d: c.d, w: c.w, from: len, len: l });
+      len += l;
+    }));
+    if (len > 150) GLYPHS.push({ chunks, len, x0, y0, x1, y1, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, h: y1 - y0, wd: x1 - x0 });
+  });
   const hfSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   hfSvg.setAttribute('viewBox', '0 0 1920 1080');
   hfSvg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
   hfSvg.setAttribute('aria-hidden', 'true');
   hfSvg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none';
   heroUi.insertBefore(hfSvg, heroUi.firstChild);
-  const hfPaths = HF_ZONES.map((z) => {
-    const el = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    el.setAttribute('fill', 'none'); el.setAttribute('stroke', z.color); el.setAttribute('stroke-linecap', 'round');
-    el.setAttribute('vector-effect', 'non-scaling-stroke'); el.setAttribute('visibility', 'hidden');
-    hfSvg.appendChild(el);
-    return { el, k: -1, L: 0 };
+  const hfSlots = Array.from({ length: HF.slots }, () => {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('fill', 'none'); g.setAttribute('stroke', '#0E0D0D');
+    g.setAttribute('stroke-linecap', 'round'); g.setAttribute('stroke-linejoin', 'round');
+    g.style.display = 'none';
+    hfSvg.appendChild(g);
+    return { g, k: -1, paths: [] };
   });
-  const hfRnd = (k, i) => { let x = Math.imul(k * 7919 + i * 104729 + 17, 2654435761) >>> 0; return () => { x = Math.imul(x ^ (x >>> 15), 2246822519) >>> 0; x ^= x >>> 13; return (x >>> 0) / 4294967296; }; };
+  const hfRnd = (k) => { let x = Math.imul(k * 7919 + 17, 2654435761) >>> 0; return () => { x = Math.imul(x ^ (x >>> 15), 2246822519) >>> 0; x ^= x >>> 13; return (x >>> 0) / 4294967296; }; };
+  const hfFree = (x0, y0, x1, y1) => x0 >= HF_AREA.x0 && x1 <= HF_AREA.x1 && y0 >= HF_AREA.y0 && y1 <= HF_AREA.y1 &&
+    !HF_KEEP_OUT.some(([a0, b0, a1, b1]) => x0 < a1 && x1 > a0 && y0 < b1 && y1 > b0);
+  const WRITE_EASE = Ease.bezier(0.45, 0.05, 0.35, 1);
+  function hfPlace(slot, k) {
+    const r = hfRnd(k);
+    let gl, sc, x, y, n = 0;
+    do {                                     // a letter, a size and a free spot that fits it
+      gl = GLYPHS[Math.floor(r() * GLYPHS.length)];
+      sc = (70 + r() * 90) / Math.max(gl.h, gl.wd * 0.55);
+      x = HF_AREA.x0 + r() * (HF_AREA.x1 - HF_AREA.x0); y = HF_AREA.y0 + r() * (HF_AREA.y1 - HF_AREA.y0);
+    } while (!hfFree(x - gl.wd * sc / 2, y - gl.h * sc / 2, x + gl.wd * sc / 2, y + gl.h * sc / 2) && ++n < 80);
+    const rot = (r() - 0.5) * 16;
+    slot.g.setAttribute('transform', 'translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') rotate(' + rot.toFixed(1) + ') scale(' + sc.toFixed(4) + ') translate(' + (-gl.cx).toFixed(1) + ' ' + (-gl.cy).toFixed(1) + ')');
+    slot.g.innerHTML = gl.chunks.map((c) => '<path d="' + c.d + '" stroke-width="' + (c.w * 0.72).toFixed(2) + '"/>').join('');
+    slot.paths = $$('path', slot.g).map((el, i) => ({ el, from: gl.chunks[i].from, len: gl.chunks[i].len, real: el.getTotalLength() }));
+    slot.len = gl.len; slot.k = k;
+  }
   function renderHeroFlourishes(t) {
-    const ts = t - T.slider;
-    hfPaths.forEach((hp, i) => {
-      const z = HF_ZONES[i], off = HF.delay + i * HF.gap;
-      const k = Math.floor((ts - off) / HF.every), local = ts - off - k * HF.every;
-      if (reduceMotion || k * HF.every < SLIDE || local < 0 || local > HF.dur) { hp.el.setAttribute('visibility', 'hidden'); return; }
-      const r = hfRnd(k, i);
-      if (hp.k !== k) {                      // a new flick: new shape, place, size and angle
-        hp.k = k;
-        const sh = SCRIPT_SHAPES[Math.floor(r() * SCRIPT_SHAPES.length)];
-        const x = z.x0 + r() * (z.x1 - z.x0), y = z.y0 + r() * (z.y1 - z.y0);
-        const sc = 0.62 * (0.95 + r() * 0.55), rot = (r() - 0.5) * 40;
-        hp.el.setAttribute('d', sh.d);
-        hp.el.setAttribute('stroke-width', (1 + r() * 0.5).toFixed(2));
-        hp.el.setAttribute('transform', 'translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') rotate(' + rot.toFixed(1) + ') scale(' + sc.toFixed(3) + ') translate(' + (-sh.cx).toFixed(1) + ' ' + (-sh.cy).toFixed(1) + ')');
-        hp.L = hp.el.getTotalLength();
-        hp.from = hp.L * r() * 0.15; hp.run = hp.L * (0.7 + r() * 0.3); hp.seg = Math.min(480, hp.run * 0.5);
-      }
-      const p = COMET_EASE(clamp01(local / HF.dur));
-      const head = p * (hp.run + hp.seg), a = Math.max(0, head - hp.seg), b = Math.min(hp.run, head);
-      if (b - a < 0.5) { hp.el.setAttribute('visibility', 'hidden'); return; }
-      hp.el.setAttribute('visibility', 'visible');
-      hp.el.style.strokeDasharray = '0 ' + (hp.from + a).toFixed(1) + ' ' + (b - a).toFixed(1) + ' ' + (hp.L + 400).toFixed(1);
-      hp.el.setAttribute('opacity', (z.alpha * Math.min(1, (1 - p) * 3, p * 8)).toFixed(3));
+    const ts = t - T.slider - HF.start, life = HF.write + HF.hold + HF.fade;
+    const kNow = Math.floor(ts / HF.every);
+    hfSlots.forEach((slot, i) => {
+      // the most recent event that uses this slot
+      let k = kNow - (((kNow - i) % HF.slots) + HF.slots) % HF.slots;
+      const local = ts - k * HF.every;
+      if (reduceMotion || ts < 0 || k < 0 || local < 0 || local > life) { slot.g.style.display = 'none'; return; }
+      if (slot.k !== k) hfPlace(slot, k);
+      const pw = WRITE_EASE(clamp01(local / HF.write)), drawn = pw * slot.len;
+      slot.paths.forEach((p) => {
+        const d = Math.min(p.len, Math.max(0, drawn - p.from)), dr = p.len > 0 ? d / p.len * p.real : 0;
+        p.el.style.strokeDasharray = dr.toFixed(2) + ' ' + (p.real + 10).toFixed(2);
+        p.el.style.visibility = dr > 0.05 ? 'visible' : 'hidden';
+      });
+      const fade = clamp01((local - HF.write - HF.hold) / HF.fade);
+      slot.g.style.display = '';
+      slot.g.setAttribute('opacity', (HF.alpha * (1 - Ease.sineInOut(fade))).toFixed(3));
     });
   }
 
