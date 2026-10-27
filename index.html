@@ -593,13 +593,14 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   /*  is masked away zone by zone while the pen writes through it.        */
   /*  The / Coastal: revealed by pen strokes inside an SVG mask.          */
   /* ------------------------------------------------------------------ */
-  /* Lettering write-on, after a whip-style After Effects reveal:
-     strokes are written in parallel, overlapping and staggered left to right; each one is a quick
-     lash (fast attack, long silky settle); on the long strokes a thin hairline flicks through just
-     ahead of the ink and is gone. Where a stroke crosses A, C, H or O, the part it replaces is
-     sliced off the instant the stroke passes, the cut running away from the line. */
+  /* Lettering write-on, after a whip-style After Effects reveal (LÁTIGO reference):
+     prelude: a few short, thin comets run along the letters' own paths, here and there, and vanish;
+     then the strokes are written in parallel, overlapping and staggered left to right, each a quick
+     lash (fast attack, long silky settle) that opens from a thin tip. Where a stroke crosses A, C, H
+     or O, the part it replaces is sliced off the instant the stroke passes, the cut running away
+     from the line. */
   const STROKE_EASE = Ease.bezier(0.3, 0.5, 0.12, 1);   // quick attack, long silky settle
-  const TRAIL_EASE = Ease.bezier(0.3, 0, 0.2, 1);
+  const COMET_EASE = Ease.bezier(0.42, 0.1, 0.2, 1);
   const TIP = 60;              // length of ink over which a stroke opens from its thin tip, logo units
 
   function pathBox(d) {
@@ -684,13 +685,11 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     }
     for (const part of ['the', 'coastal']) {
       h += '<g mask="url(#' + id + '-m' + part + ')">' + LOGO[part].fills.map((d) => '<path d="' + d + '"/>').join('') + '</g>';
-      // hairline flicks: one per stroke, the stroke's own centre line, slightly offset
-      h += '<g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round">';
-      let n = 0;
+      // comets: a short, thin slice of light runs along the stroke's own centre line before it is written
+      h += '<g fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round">';
       LOGO[part].letters.forEach((letter, li) => letter.forEach((stroke, si) => {
         const d = stroke.map((c, ci) => (ci ? c.d.replace(/^M/, 'L') : c.d)).join('');
-        const off = (n++ % 2 ? [-5, 7] : [6, -6]);
-        h += '<path class="trail" data-l="' + li + '" data-s="' + si + '" transform="translate(' + off + ')" visibility="hidden" d="' + d + '"/>';
+        h += '<path class="trail" data-l="' + li + '" data-s="' + si + '" visibility="hidden" d="' + d + '"/>';
       }));
       h += '</g>';
     }
@@ -762,17 +761,6 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
           if (c.from < TIP) c.el.style.strokeWidth = (c.w * (0.18 + 0.82 * Ease.sineInOut(clamp01(sp / TIP)))).toFixed(2);
         }
       });
-      // hairline flick: a short slice of line that runs ahead of the ink along the stroke and leaves
-      if (st.trail && L > 260) {
-        const tL = st.tlen, seg = Math.min(170, tL * 0.32), td = dur * 0.9;
-        tl.add(at + dur * 0.04, td, TRAIL_EASE, (p) => {
-          const head = p * (tL + seg), a = Math.max(0, head - seg), b = Math.min(tL, head);
-          if (p <= 0 || p >= 1 || b - a < 0.5) { st.trail.setAttribute('visibility', 'hidden'); return; }
-          st.trail.setAttribute('visibility', 'visible');
-          st.trail.style.strokeDasharray = '0 ' + a.toFixed(1) + ' ' + (b - a).toFixed(1) + ' ' + (tL + 400);
-          st.trail.setAttribute('opacity', (0.55 * Math.sin(Math.PI * Math.min(1, p * 1.1))).toFixed(3));
-        });
-      }
       if (onChunk) st.chunks.forEach((c) => onChunk(st.li, st.si, c.ci, c, (pos) => at + dur * invEase(STROKE_EASE, clamp01((c.from + pos) / L))));
       end = Math.max(end, at + dur);
     });
@@ -808,7 +796,24 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
         last = Math.max(last, at + dur);
       });
     };
-    const theAt = t0 + o.wordGap + o.wordDur * 0.72;
+    const theAt = t0 + o.wordGap + o.wordDur * 0.72 + o.prelude;
+    // prelude: before any ink, a few comets trace the longest strokes of both words, one after another,
+    // in an order that jumps around the logo; each is a short thin slice that runs part of the way and is gone
+    const pool = logo.the.strokes.concat(logo.coastal.strokes).filter((st) => st.trail && st.tlen > 240)
+      .sort((a, b) => b.tlen - a.tlen).slice(0, o.comets);
+    const order = [2, 0, 4, 1, 3, 5, 6].filter((k) => k < pool.length).map((k) => pool[k]);
+    order.forEach((st, k) => {
+      const tL = st.tlen, from = tL * (k % 2 ? 0.08 : 0.2), to = tL * (k % 2 ? 0.7 : 0.85);
+      const seg = Math.min(110, (to - from) * 0.35);
+      const at = theAt - o.prelude - 0.05 + k * o.cometGap;
+      tl.add(at, o.cometDur, COMET_EASE, (p) => {
+        const head = from + p * (to - from + seg), a = Math.max(from, head - seg), b = Math.min(to, head);
+        if (p <= 0 || p >= 1 || b - a < 0.5) { st.trail.setAttribute('visibility', 'hidden'); return; }
+        st.trail.setAttribute('visibility', 'visible');
+        st.trail.style.strokeDasharray = '0 ' + a.toFixed(1) + ' ' + (b - a).toFixed(1) + ' ' + (tL + 400);
+        st.trail.setAttribute('opacity', Math.min(1, (1 - p) * 4).toFixed(3));
+      });
+    });
     const theEnd = scheduleScript(tl, logo.the, theAt, o, knockAt('the'));
     const end = scheduleScript(tl, logo.coastal, theAt + o.coastalLag, o, knockAt('coastal'));
     return Math.max(theEnd, end, last);
@@ -902,7 +907,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
 
   tl.add(0.3, 1.6, Ease.smooth, (p) => { keyOutline.style.strokeDashoffset = kOutlineLen * (1 - p); });
 
-  scheduleLogo(tl, plLogo, 0.3, { wordDur: 0.8, wordGap: 0.22, stagger: 0.05, pace: 0.8, coastalLag: 0.34, cut: 0.26 });
+  scheduleLogo(tl, plLogo, 0.3, { wordDur: 0.8, wordGap: 0.22, stagger: 0.05, pace: 0.8, coastalLag: 0.34, cut: 0.26, prelude: 0.32, comets: 5, cometGap: 0.07, cometDur: 0.32 });
 
   // keyhole fills with white from the bottom
   tl.add(1.85, 0.8, Ease.smooth, (p) => { plFill.style.clipPath = 'inset(' + ((1 - p) * 100).toFixed(2) + '% 0 0 0)'; });
@@ -1012,7 +1017,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   // Distances are in logo units and clear the viewport at any width (layout scales with vw):
   // BLACK's right edge sits ≈1113 design px from the left edge, THORN's left edge ≈1170 px from the right.
   $$('#heroLogo .w-black, #heroLogo .w-thorn').forEach((g) => g.removeAttribute('clip-path'));
-  const heroEnd = scheduleLogo(tl, heroLogo, T.logo, { wordDur: 1.35, wordGap: 0.22, distB: 1900, distT: 2000, stagger: 0.07, pace: 1.15, coastalLag: 0.45, cut: 0.32 });
+  const heroEnd = scheduleLogo(tl, heroLogo, T.logo, { wordDur: 1.35, wordGap: 0.22, distB: 1900, distT: 2000, stagger: 0.07, pace: 1.15, coastalLag: 0.45, cut: 0.32, prelude: 0.45, comets: 6, cometGap: 0.085, cometDur: 0.42 });
 
   tl.add(TX + 0.45, 1.3, Ease.smooth, (p) => { rings.forEach((r) => { r.style.strokeDashoffset = (ringLen * (1 - p)).toFixed(2); }); });
 
