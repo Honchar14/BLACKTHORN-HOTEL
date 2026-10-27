@@ -551,7 +551,8 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
                           and simply turns from light to ink as the curtain edge passes over it
      'keyhole' (?intro=keyhole)  the previous version: small logo top right, keyhole that opens onto the
                           first screen, the logo drawn there */
-  const INTRO = qs.get('intro') === 'keyhole' ? 'keyhole' : 'center';
+  // this branch: the keyhole intro is the default; ?intro=center shows the centred one
+  const INTRO = qs.get('intro') === 'center' ? 'center' : 'keyhole';
   const CENTER = INTRO === 'center';
   const T = CENTER ? { loadStart: 0.6, loadDur: 6.0 } : { loadStart: 3.0, loadDur: 5.0 };
   T.exit = T.loadStart + T.loadDur;          // keyhole: 8.0 · center: 6.6   counter at 100, preloader UI leaves
