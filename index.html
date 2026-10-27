@@ -646,7 +646,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     return best;
   }
 
-  function buildLogo(el, id) {
+  function buildLogo(el, id, opts = {}) {
     const box = 'x="-40" y="-40" width="1594" height="1032"';
     let h = '<svg viewBox="0 0 1514 952" fill="currentColor" aria-hidden="true" focusable="false"><defs>';
     // feathered pen tip: the leading edge of the ink fades in over a few units instead of a hard cut
@@ -669,17 +669,26 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     h += '<clipPath id="' + id + '-cb"><rect x="-1.5" y="-400" width="3000" height="2000"/></clipPath>';
     h += '<clipPath id="' + id + '-ct"><rect x="-1500" y="-400" width="3015.5" height="2000"/></clipPath>';
     h += '</defs>';
+    // BLACK / THORN, drawn like the keyhole: a hairline outline runs round each letter, then the ink
+    // rises inside it from the bottom. The outline is clipped to the letter, so only its inner half
+    // shows and the rising ink covers it exactly.
+    let n = 0;
+    const olw = opts.outline || 6.5;
     for (const w of ['black', 'thorn']) {
       const part = w === 'black' ? 'the' : 'coastal';
       h += '<g class="w-' + w + '" clip-path="url(#' + id + (w === 'black' ? '-cb' : '-ct') + ')"><g>';
       LOGO[w].forEach((l) => {
-        h += '<g class="lt"><path d="' + l.cut + '"/>';
-        const lb = pathBox(l.full);      // each letter carries its own pieces, so they ride along with its slide-in
-        LOGO.knock.forEach((k, i) => {
-          if (k.part !== part || !overlap(lb, KNOCK[i])) return;
+        const lb = pathBox(l.full), k = n++;
+        h += '<g class="lt"><defs><clipPath id="' + id + '-lf' + k + '" clipPathUnits="userSpaceOnUse"><rect class="lf" x="' + (lb.x0 - 4) + '" y="' + (lb.y1 + 4) + '" width="' + (lb.x1 - lb.x0 + 8) + '" height="0" data-h="' + (lb.y1 - lb.y0 + 8) + '"/></clipPath>' +
+             '<clipPath id="' + id + '-lo' + k + '" clipPathUnits="userSpaceOnUse"><path d="' + l.full + '"/></clipPath></defs>';
+        h += '<g class="lt-ink" clip-path="url(#' + id + '-lf' + k + ')"><path d="' + l.cut + '"/>';
+        LOGO.knock.forEach((kk, i) => {        // each letter carries its own cut-away pieces
+          if (kk.part !== part || !overlap(lb, KNOCK[i])) return;
           h += '<g class="kp" clip-path="url(#' + id + '-kc' + i + ')"><path mask="url(#' + id + '-kp' + i + ')" d="' + l.full + '"/></g>';
         });
-        h += '</g>';
+        h += '</g><g class="lt-ol" clip-path="url(#' + id + '-lo' + k + ')" fill="none" stroke="currentColor" stroke-width="' + olw + '">';
+        l.full.match(/M[^M]*/g).forEach((sub) => { h += '<path d="' + sub + '"/>'; });
+        h += '</g></g>';
       });
       h += '</g></g>';
     }
@@ -717,27 +726,41 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
       });
       return { strokes, full: mask.querySelector('.pen-full') };
     };
+    const letter = (g) => {
+      const box = g.querySelector('.lf'), y1 = +box.getAttribute('y');
+      const outs = $$('.lt-ol path', g).map((pp) => { const len = pp.getTotalLength(); pp.style.strokeDasharray = len + ' ' + len; pp.style.strokeDashoffset = len; return { el: pp, len }; });
+      return { fill: box, y1, h: +box.dataset.h, outline: g.querySelector('.lt-ol'), outs };
+    };
     return {
-      black: $$('.w-black .lt', svg),
-      thorn: $$('.w-thorn .lt', svg),
+      black: $$('.w-black .lt', svg).map(letter),
+      thorn: $$('.w-thorn .lt', svg).map(letter),
       cuts: $$('.kc', svg),
       the: pens('the'),
       coastal: pens('coastal'),
     };
   }
 
-  /** BLACK slides in from the left, THORN from the right, they lock together.
-      No fades: each word emerges from behind an invisible edge (its clip). */
-  function scheduleWords(tl, logo, t0, dur, gap, distB = 1010, distT = 1100) {
-    const n = logo.black.length;
-    logo.black.forEach((g, i) => {
-      const at = t0 + (n - 1 - i) * 0.045;              // leading letter (K) arrives first
-      tl.add(at, dur, Ease.expoOut, (p) => g.setAttribute('transform', 'translate(' + (-(1 - p) * distB).toFixed(2) + ' 0)'));
+  /** BLACK / THORN appear like the keyhole: the outline draws round each letter (same move and
+      curve as the keyhole outline), then the ink rises inside from the bottom; letters follow each
+      other left to right, THORN a beat after BLACK. Returns the time both words are solid. */
+  function scheduleWords(tl, logo, t0, o) {
+    let end = t0;
+    const word = (letters, w0) => letters.forEach((L, i) => {
+      const at = w0 + i * o.letterGap;
+      tl.add(at, o.drawDur, Ease.smooth, (p) => L.outs.forEach((s) => { s.el.style.strokeDashoffset = (s.len * (1 - p)).toFixed(2); }));
+      const fAt = at + o.drawDur - o.fillOverlap;
+      tl.add(fAt, o.fillDur, Ease.smooth, (p) => {
+        const hh = L.h * p;
+        L.fill.setAttribute('y', (L.y1 - hh).toFixed(2)); L.fill.setAttribute('height', hh.toFixed(2));
+      });
+      // once the ink has risen, the outline underneath is no longer needed (and must not show through
+      // where the script later slices pieces away)
+      tl.set(fAt + o.fillDur, (on) => { L.outline.style.visibility = on ? 'hidden' : ''; });
+      end = Math.max(end, fAt + o.fillDur);
     });
-    logo.thorn.forEach((g, i) => {
-      const at = t0 + gap + i * 0.045;                   // leading letter (T) arrives first
-      tl.add(at, dur, Ease.expoOut, (p) => g.setAttribute('transform', 'translate(' + ((1 - p) * distT).toFixed(2) + ' 0)'));
-    });
+    word(logo.black, t0);
+    word(logo.thorn, t0 + o.wordGap);
+    return end;
   }
 
   const invEase = (ease, y) => { let lo = 0, hi = 1; for (let k = 0; k < 32; k++) { const m = (lo + hi) / 2; if (ease(m) < y) lo = m; else hi = m; } return (lo + hi) / 2; };
@@ -771,7 +794,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
 
   /** full logo sequence: words, then "The", then "Coastal" overlapping it */
   function scheduleLogo(tl, logo, t0, o) {
-    scheduleWords(tl, logo, t0, o.wordDur, o.wordGap, o.distB, o.distT);
+    const wordsEnd = scheduleWords(tl, logo, t0, o);
     let last = 0;
     // the stroke slices the cut-away piece off as its head passes: the cut runs from the stroke
     // to the far side of the piece, quick as the stroke itself
@@ -796,7 +819,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
         last = Math.max(last, at + dur);
       });
     };
-    const theAt = t0 + o.wordGap + o.wordDur * 0.72 + o.prelude;
+    const theAt = wordsEnd - o.scriptOverlap + o.prelude;   // the comets start while the ink is still rising
     // prelude: before any ink, a few comets trace the longest strokes of both words, one after another,
     // in an order that jumps around the logo; each is a short thin slice that runs part of the way and is gone
     const pool = logo.the.strokes.concat(logo.coastal.strokes).filter((st) => st.trail && st.tlen > 240)
@@ -856,8 +879,8 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   });
   book.setAttribute('aria-label', label);
 
-  const plLogo = buildLogo($('#plLogo'), 'pl');
-  const heroLogo = buildLogo($('#heroLogo'), 'hero');
+  const plLogo = buildLogo($('#plLogo'), 'pl', { outline: 11 });
+  const heroLogo = buildLogo($('#heroLogo'), 'hero', { outline: 6.5 });
 
   const kOutlineLen = keyOutline.getTotalLength();
   keyOutline.style.strokeDasharray = kOutlineLen + ' ' + kOutlineLen;
@@ -907,7 +930,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
 
   tl.add(0.3, 1.6, Ease.smooth, (p) => { keyOutline.style.strokeDashoffset = kOutlineLen * (1 - p); });
 
-  scheduleLogo(tl, plLogo, 0.3, { wordDur: 0.8, wordGap: 0.22, stagger: 0.05, pace: 0.8, coastalLag: 0.34, cut: 0.26, prelude: 0.32, comets: 5, cometGap: 0.07, cometDur: 0.32 });
+  scheduleLogo(tl, plLogo, 0.3, { letterGap: 0.07, wordGap: 0.18, drawDur: 1.2, fillDur: 0.7, fillOverlap: 0.12, scriptOverlap: 0.25, stagger: 0.05, pace: 0.8, coastalLag: 0.34, cut: 0.26, prelude: 0.32, comets: 5, cometGap: 0.07, cometDur: 0.32 });
 
   // keyhole fills with white from the bottom
   tl.add(1.85, 0.8, Ease.smooth, (p) => { plFill.style.clipPath = 'inset(' + ((1 - p) * 100).toFixed(2) + '% 0 0 0)'; });
@@ -1017,7 +1040,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   // Distances are in logo units and clear the viewport at any width (layout scales with vw):
   // BLACK's right edge sits ≈1113 design px from the left edge, THORN's left edge ≈1170 px from the right.
   $$('#heroLogo .w-black, #heroLogo .w-thorn').forEach((g) => g.removeAttribute('clip-path'));
-  const heroEnd = scheduleLogo(tl, heroLogo, T.logo, { wordDur: 1.35, wordGap: 0.22, distB: 1900, distT: 2000, stagger: 0.07, pace: 1.15, coastalLag: 0.45, cut: 0.32, prelude: 0.45, comets: 6, cometGap: 0.085, cometDur: 0.42 });
+  const heroEnd = scheduleLogo(tl, heroLogo, T.logo, { letterGap: 0.07, wordGap: 0.2, drawDur: 1.1, fillDur: 0.75, fillOverlap: 0.15, scriptOverlap: 0.3, stagger: 0.07, pace: 1.15, coastalLag: 0.45, cut: 0.32, prelude: 0.45, comets: 6, cometGap: 0.085, cometDur: 0.42 });
 
   tl.add(TX + 0.45, 1.3, Ease.smooth, (p) => { rings.forEach((r) => { r.style.strokeDashoffset = (ringLen * (1 - p)).toFixed(2); }); });
 
