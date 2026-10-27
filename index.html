@@ -738,7 +738,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     h += '</g>';
     // construction lines: the type's own grid (cap line of BLACK, the shared line where BLACK stands on
     // THORN, baseline of THORN, and the K / H stem they lock on), each opening outward from the joint
-    h += '<g class="guides" fill="none" stroke="currentColor" stroke-width="' + (olw * 0.75).toFixed(2) + '" opacity="0.55">';
+    h += '<g class="guides" fill="none" stroke="currentColor" stroke-width="' + (opts.guidePx ? opts.guidePx * 1514 / (opts.logoPx || 939.2) : olw * 0.75).toFixed(2) + '" opacity="' + (opts.guideOpacity || 0.55) + '">';
     guidesFor(opts.reachH, opts.reachV).forEach((g) => { h += '<path class="gd" d="' + g + '" visibility="hidden"/>'; });
     if (opts.cropMarks) CROP.forEach((g) => { h += '<path class="cm" d="' + g + '" visibility="hidden"/>'; });
     h += '</g>';
@@ -819,10 +819,11 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   function scheduleWords(tl, logo, t0, o) {
     const M = logo.mark, F = 9;                         // soft edge of the rising ink, logo units
     // grid: the head shoots out, then the tail follows it off the end
-    const gEnd = o.guideOut + o.guideOutDur;
+    // guidesStay: the lines open and stay (centred preloader: they leave with the preloader itself)
+    const gEnd = o.guidesStay ? o.guideIn : o.guideOut + o.guideOutDur;
     tl.add(t0, gEnd, Ease.linear, (p) => {
       const t = p * gEnd;
-      const head = GUIDE_IN(clamp01(t / o.guideIn)), tail = GUIDE_OUT(clamp01((t - o.guideOut) / o.guideOutDur));
+      const head = GUIDE_IN(clamp01(t / o.guideIn)), tail = o.guidesStay ? 0 : GUIDE_OUT(clamp01((t - o.guideOut) / o.guideOutDur));
       logo.guides.forEach((g) => {
         const a = tail * g.len, b = head * g.len;
         if (b - a < 0.5) { g.el.setAttribute('visibility', 'hidden'); return; }
@@ -984,6 +985,20 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   const bookLabel = $('#bookLabel');
   const rings = $$('.book-ring .ring', book);   // two arcs: solid end → transparent end
 
+  // centred intro: ruler laid out as in Figma (Preloader Phase 12): it starts right after the counter
+  // (x 322) and runs to x 1906; a tick every 22 px (short, 50 %), tall pairs every 264 px, one pair on the
+  // K / H stem lines (982 / 1004); the progress marker is 50 px tall
+  if (CENTER) {
+    const W = 1584.5, tall = new Set([132, 154, 396, 418, 660, 682, 924, 946, 1188, 1210, 1452, 1474]);
+    let svgR = '<svg width="' + W + '" height="30" viewBox="0 0 ' + W + ' 30" fill="none" xmlns="http://www.w3.org/2000/svg">';
+    for (let x = 0; x <= 1584; x += 22) {
+      const t = tall.has(x), xx = x + 0.25;
+      svgR += '<path d="M' + xx + ' ' + (t ? 0 : 18.5) + 'L' + xx + ' 30" stroke-width="1" stroke="#F0EFEB" stroke-opacity="' + (t ? 1 : 0.5) + '"/>';
+    }
+    ruler.innerHTML = svgR + '</svg>';
+    Object.assign(ruler.style, { left: 'calc(322 * var(--u))', width: 'calc(' + W + ' * var(--u))', height: 'calc(30 * var(--u))' });
+    Object.assign(direct.style, { left: 'calc(322 * var(--u) - var(--line) / 2)' });
+  }
   // ruler: stretch exactly to its box so the last tick sits at the end of the track
   ruler.querySelector('svg').setAttribute('preserveAspectRatio', 'none');
   const ticks = $$('path', ruler).map((p) => {
@@ -1009,9 +1024,9 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     $('#plKeyhole').style.display = 'none';
     plFill.style.display = 'none';
   }
-  // centred: the grid runs right across the screen (logo units; the screen is ~1550 units either side)
+  // centred: the grid runs right across the screen and stays (logo units; the screen is ~1550 units either side)
   const plLogo = CENTER
-    ? buildLogo($('#plLogo'), 'pl', { outlinePx: 1.5, logoPx: 939.2, cropMarks: true })
+    ? buildLogo($('#plLogo'), 'pl', { outlinePx: 1.5, logoPx: 939.2, reachH: 1700, reachV: 900, guidePx: 1, guideOpacity: 0.9 })
     : buildLogo($('#plLogo'), 'pl', { outlinePx: 1, logoPx: 294 });
   const heroLogo = buildLogo($('#heroLogo'), 'hero', { outlinePx: 1.5, logoPx: 939.2 });
 
@@ -1068,7 +1083,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   // centred: the full-size drawing, with the grid given a little longer to cross the screen
   // centred: drawn slowly, like a pencil, with flashes racing round the mark ahead of it
   if (CENTER) scheduleLogo(tl, plLogo, 0.5, Object.assign({}, HERO_LOGO_OPTS, {
-    guideIn: 0.9, guideOut: 3.0, guideOutDur: 0.8,
+    guideIn: 1.1, guidesStay: true,
     pencil: true, drawAt: 0.35, drawDur: 2.9, innerDelay: 0.9, innerGap: 0.28,
     fillDelay: 2.55, fillDur: 1.25, markComets: 7, markCometGap: 0.36,
   }));
@@ -1088,7 +1103,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
     const LY = 244.8, LU = 939.2 / 1514;                       // logo top and logo unit, design px
     const H = [30, 1050, LY + 231.7 * LU, LY + 486 * LU, LY + 740.4 * LU, 168, 912];
-    const V = [30, 348, 960, 1213, 1890, 659];
+    const V = [30, 322, 960, 1213, 1890, 718, 1246];
     const streaks = [];
     for (let k = 0, at = 0.45; at < T.exit - 0.35; k++) {
       const hor = rnd() < 0.62, list = hor ? H : V, pos = list[Math.floor(rnd() * list.length)];
