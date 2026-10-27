@@ -739,7 +739,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     // construction lines: the type's own grid (cap line of BLACK, the shared line where BLACK stands on
     // THORN, baseline of THORN, and the K / H stem they lock on), each opening outward from the joint
     h += '<g class="guides" fill="none" stroke="currentColor" stroke-width="' + (opts.guidePx ? opts.guidePx * 1514 / (opts.logoPx || 939.2) : olw * 0.75).toFixed(2) + '" opacity="' + (opts.guideOpacity || 0.55) + '">';
-    guidesFor(opts.reachH, opts.reachV).forEach((g) => { h += '<path class="gd" d="' + g + '" visibility="hidden"/>'; });
+    if (!opts.noGuides) guidesFor(opts.reachH, opts.reachV).forEach((g) => { h += '<path class="gd" d="' + g + '" visibility="hidden"/>'; });
     if (opts.cropMarks) CROP.forEach((g) => { h += '<path class="cm" d="' + g + '" visibility="hidden"/>'; });
     h += '</g>';
     // flashes along the mark: short slices that race round the silhouette ahead of the pencil and vanish
@@ -886,7 +886,8 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     });
     // the hairline melts into the ink once both have reached the top
     tl.add(fAt + o.fillDur - 0.3, 0.4, Ease.sineInOut, (p) => M.outline.setAttribute('opacity', (1 - p).toFixed(3)));
-    return Math.max(fAt + o.fillDur, t0 + gEnd);
+    // pencil (centred preloader): the long lines leave on their own clock, the script follows the ink
+    return o.pencil ? fAt + o.fillDur : Math.max(fAt + o.fillDur, t0 + gEnd);
   }
 
   const invEase = (ease, y) => { let lo = 0, hi = 1; for (let k = 0; k < 32; k++) { const m = (lo + hi) / 2; if (ease(m) < y) lo = m; else hi = m; } return (lo + hi) / 2; };
@@ -988,23 +989,60 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   // centred intro: ruler laid out as in Figma (Preloader Phase 12): it starts right after the counter
   // (x 322) and runs to x 1906; a tick every 22 px (short, 50 %), tall pairs every 264 px, one pair on the
   // K / H stem lines (982 / 1004); the progress marker is 50 px tall
+  // The full-length guide lines and the ruler are drawn in screen pixels by one function, so every line
+  // lands on exactly the same device pixels as the ruler tick under it (the stem lines sit on the tall pair
+  // at 982 / 1004).
+  const snapLine = (v, u) => {               // design px → centre of a crisp 1-design-px line, in CSS px
+    const dpr = window.devicePixelRatio || 1, w = Math.max(1, Math.round(u * dpr));
+    return { c: (Math.round(v * u * dpr - w / 2) + w / 2) / dpr, w: w / dpr };
+  };
+  const RULER_TALL = new Set([132, 154, 396, 418, 660, 682, 924, 946, 1188, 1210, 1452, 1474]);
+  let plGrid = null;
   if (CENTER) {
-    const W = 1584.5, tall = new Set([132, 154, 396, 418, 660, 682, 924, 946, 1188, 1210, 1452, 1474]);
-    let svgR = '<svg width="' + W + '" height="30" viewBox="0 0 ' + W + ' 30" fill="none" xmlns="http://www.w3.org/2000/svg">';
+    let svgR = '<svg fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:visible">';
     for (let x = 0; x <= 1584; x += 22) {
-      const t = tall.has(x), xx = x + 0.25;
-      svgR += '<path d="M' + xx + ' ' + (t ? 0 : 18.5) + 'L' + xx + ' 30" stroke-width="1" stroke="#F0EFEB" stroke-opacity="' + (t ? 1 : 0.5) + '"/>';
+      const t = RULER_TALL.has(x);
+      svgR += '<path data-x="' + x + '" data-tall="' + (t ? 1 : 0) + '" stroke="#F0EFEB" stroke-opacity="' + (t ? 1 : 0.5) + '"/>';
     }
     ruler.innerHTML = svgR + '</svg>';
-    Object.assign(ruler.style, { left: 'calc(322 * var(--u))', width: 'calc(' + W + ' * var(--u))', height: 'calc(30 * var(--u))' });
+    Object.assign(ruler.style, { left: '0', width: '100vw', height: 'calc(30 * var(--u))' });
     Object.assign(direct.style, { left: 'calc(322 * var(--u) - var(--line) / 2)' });
+    // screen grid: three horizontals on the logo's lines, two verticals on the tall ruler pair
+    plGrid = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    plGrid.setAttribute('class', 'pl-grid');
+    plGrid.setAttribute('aria-hidden', 'true');
+    plGrid.style.cssText = 'position:absolute;left:0;top:0;width:100vw;height:100vh;overflow:visible;pointer-events:none';
+    plGrid.innerHTML = '<g fill="none" stroke="#F0EFEB" stroke-opacity="0.9">' + Array.from({ length: 10 }, () => '<path visibility="hidden"/>').join('') + '</g>';
+    $('#plUi').insertBefore(plGrid, $('#plLogo'));
+  }
+  function layoutScreenLines() {
+    if (!CENTER) return;
+    const W = window.innerWidth, H = window.innerHeight, u = W / 1920;
+    const rh = 30 * u;
+    const svgR = ruler.querySelector('svg');
+    svgR.setAttribute('width', W); svgR.setAttribute('height', rh.toFixed(2)); svgR.setAttribute('viewBox', '0 0 ' + W + ' ' + rh.toFixed(2));
+    $$('path', svgR).forEach((p) => {
+      const s = snapLine(322 + +p.dataset.x, u);
+      p.setAttribute('stroke-width', s.w);
+      p.setAttribute('d', 'M' + s.c + ' ' + (p.dataset.tall === '1' ? 0 : 18.5 * u).toFixed(2) + 'V' + rh.toFixed(2));
+    });
+    // logo box of the centred preloader (same as the first screen's logo)
+    const k = (939.2 * u) / 1514, top = H / 2 - (590.4 * u) / 2, left = W / 2 - (939.2 * u) / 2;
+    const jx = left + GX * k, jy = top + GY * k;
+    const hy = [231.7, GY, 740.4].map((y) => snapLine((top + y * k) / u, u));
+    const vx = [982, 1004].map((x) => snapLine(x, u));
+    const d = [];
+    hy.forEach((s) => { d.push(['M' + jx + ' ' + s.c + 'H-20', s.w], ['M' + jx + ' ' + s.c + 'H' + (W + 20), s.w]); });
+    vx.forEach((s) => { d.push(['M' + s.c + ' ' + jy + 'V-20', s.w], ['M' + s.c + ' ' + jy + 'V' + (H + 20), s.w]); });
+    $$('path', plGrid).forEach((p, i) => { p.setAttribute('d', d[i][0]); p.setAttribute('stroke-width', d[i][1]); });
+    if (plLogo) plLogo.guides = $$('path', plGrid).map((g) => ({ el: g, len: g.getTotalLength() }));
   }
   // ruler: stretch exactly to its box so the last tick sits at the end of the track
   ruler.querySelector('svg').setAttribute('preserveAspectRatio', 'none');
   const ticks = $$('path', ruler).map((p) => {
     const base = parseFloat(p.getAttribute('stroke-opacity') || '1');
     p.setAttribute('stroke-opacity', '1');
-    const x = parseFloat(p.getAttribute('d').slice(1));
+    const x = p.dataset.x !== undefined ? +p.dataset.x : parseFloat(p.getAttribute('d').slice(1));
     return { el: p, base, x };
   }).sort((a, b) => a.x - b.x);
   const TICK_FIRST = ticks[0].x, TICK_LAST = ticks[ticks.length - 1].x;   // 0.25 … 1542.25
@@ -1026,9 +1064,10 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   }
   // centred: the grid runs right across the screen and stays (logo units; the screen is ~1550 units either side)
   const plLogo = CENTER
-    ? buildLogo($('#plLogo'), 'pl', { outlinePx: 1.5, logoPx: 939.2, reachH: 1700, reachV: 900, guidePx: 1, guideOpacity: 0.9 })
+    ? buildLogo($('#plLogo'), 'pl', { outlinePx: 1.5, logoPx: 939.2, noGuides: true })
     : buildLogo($('#plLogo'), 'pl', { outlinePx: 1, logoPx: 294 });
   const heroLogo = buildLogo($('#heroLogo'), 'hero', { outlinePx: 1.5, logoPx: 939.2 });
+  layoutScreenLines();                         // centred intro: screen grid + ruler in exact pixels
 
   const kOutlineLen = keyOutline.getTotalLength();
   keyOutline.style.strokeDasharray = kOutlineLen + ' ' + kOutlineLen;
@@ -1083,7 +1122,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   // centred: the full-size drawing, with the grid given a little longer to cross the screen
   // centred: drawn slowly, like a pencil, with flashes racing round the mark ahead of it
   if (CENTER) scheduleLogo(tl, plLogo, 0.5, Object.assign({}, HERO_LOGO_OPTS, {
-    guideIn: 1.1, guidesStay: true,
+    guideIn: 1.1, guideOut: 4.55, guideOutDur: 0.9,
     pencil: true, drawAt: 0.35, drawDur: 2.9, innerDelay: 0.9, innerGap: 0.28,
     fillDelay: 2.55, fillDur: 1.25, markComets: 7, markCometGap: 0.36,
   }));
@@ -1485,7 +1524,12 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   };
   window.addEventListener('resize', () => {
     sizeGrain(); sizeSliderGrain();
-    if (CENTER) return;                     // the curtain is set in percentages: nothing to recompute
+    if (CENTER) {                           // the curtain is set in percentages; re-lay the pixel-exact lines
+      layoutScreenLines();
+      tl.items.forEach((it) => { it.last = NaN; });
+      render();
+      return;
+    }
     const cp = clipNow(); heroBg.style.clipPath = cp; heroUi.style.clipPath = cp;
   });
 
