@@ -1033,7 +1033,8 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     let svgR = '<svg fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:visible">';
     for (let x = 0; x <= 1584; x += 22) {
       const t = RULER_TALL.has(x);
-      svgR += '<path data-x="' + x + '" data-tall="' + (t ? 1 : 0) + '" stroke="#F0EFEB" stroke-opacity="' + (t ? 1 : 0.5) + '"/>';
+      // ticks wait faint and turn fully light only as the loading passes them
+      svgR += '<path data-x="' + x + '" data-tall="' + (t ? 1 : 0) + '" stroke="#F0EFEB" stroke-opacity="' + (t ? 0.35 : 0.18) + '"/>';
     }
     ruler.innerHTML = svgR + '</svg>';
     Object.assign(ruler.style, { left: '0', width: '100vw', height: 'calc(30 * var(--u))' });
