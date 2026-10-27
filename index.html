@@ -117,6 +117,18 @@ img { display: block; }
 }
 .slide { position: absolute; inset: 0; overflow: hidden; visibility: hidden; }
 .slide img { width: 100%; height: 100%; object-fit: cover; transform-origin: 50% 50%; }   /* no will-change: lets the browser re-raster crisply at rest */
+/* live film grain over the photos: a mid-grey noise layer blended in overlay, so it lives in the
+   midtones like real grain and leaves clean highlights and deep shadows almost untouched.
+   The layer is a little larger than the slider and jumps to a new offset every frame (moved by JS). */
+.slider-grain {
+  position: absolute; z-index: 3; pointer-events: none;
+  inset: -512px auto auto -512px;          /* oversized: room for the per-frame offset */
+  width: calc(100% + 1024px); height: calc(100% + 1024px);
+  background-repeat: repeat;
+  mix-blend-mode: overlay;
+  opacity: 0;
+  will-change: transform;
+}
 
 /* ===================== HERO UI ===================== */
 .hero-ui { position: fixed; inset: 0; z-index: 5; visibility: hidden; }
@@ -322,6 +334,7 @@ img { display: block; }
     <div class="slide"><img src="images/slide-1.jpg" alt="" decoding="async"></div>
     <div class="slide"><img src="images/slide-2.jpg" alt="" decoding="async"></div>
     <div class="slide"><img src="images/slide-3.jpg" alt="" decoding="async"></div>
+    <div class="slider-grain" id="sliderGrain"></div>
   </div>
   <!-- frame lines are part of the picture behind the keyhole -->
   <div class="frame" aria-hidden="true">
@@ -580,6 +593,14 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   /*  is masked away zone by zone while the pen writes through it.        */
   /*  The / Coastal: revealed by pen strokes inside an SVG mask.          */
   /* ------------------------------------------------------------------ */
+  const KNOCK_FEATHER = 0.32;                  // soft edge of the dissolving cut-outs, share of the disc radius
+  /** points of an M/L polyline (pen paths and cut-out zones are plain polylines) */
+  function polyPoints(d) {
+    const n = d.match(/-?\d*\.?\d+/g).map(Number), pts = [];
+    for (let i = 0; i + 1 < n.length; i += 2) pts.push([n[i], n[i + 1]]);
+    return pts;
+  }
+
   function buildLogo(el, id) {
     const box = 'x="-40" y="-40" width="1594" height="1032"';
     let h = '<svg viewBox="0 0 1514 952" fill="currentColor" aria-hidden="true" focusable="false"><defs>';
@@ -594,12 +615,18 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
       h += '</g><rect class="pen-full" ' + box + ' fill="#fff" opacity="0"/></mask>';
     }
     h += '<mask id="' + id + '-kn" maskUnits="userSpaceOnUse" ' + box + '><rect ' + box + ' fill="#fff"/>';
-    // each cut-out is wiped away by a growing clip rectangle (a mask wipe), not faded
+    // each cut-out dissolves outward from the point where the pen crosses the letter: the cut is painted
+    // with its own radial gradient (black = cut, white = letter stays) whose soft-edged disc grows from the
+    // crossing and carries the cut away with it. Outside the disc the gradient pads with white, i.e. no cut.
     LOGO.knock.forEach((k, i) => {
-      h += '<g clip-path="url(#' + id + '-kc' + i + ')"><path class="kn" data-i="' + i + '" d="' + k.d + '" fill="#000"/></g>';
+      h += '<path class="kn" data-i="' + i + '" d="' + k.d + '" fill="url(#' + id + '-kg' + i + ')"/>';
     });
     h += '</mask>';
-    LOGO.knock.forEach((k, i) => { h += '<clipPath id="' + id + '-kc' + i + '" clipPathUnits="userSpaceOnUse"><rect class="kc" width="0" height="0"/></clipPath>'; });
+    LOGO.knock.forEach((k, i) => {
+      h += '<radialGradient id="' + id + '-kg' + i + '" class="kr" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="0">' +
+           '<stop offset="0" stop-color="#000"/><stop offset="' + (1 - KNOCK_FEATHER) + '" stop-color="#000"/>' +
+           '<stop offset="' + (1 - KNOCK_FEATHER * 0.45) + '" stop-color="#a6a6a6"/><stop offset="1" stop-color="#fff"/></radialGradient>';
+    });
     // BLACK slides out from behind its left edge, THORN from behind its right edge
     h += '<clipPath id="' + id + '-cb"><rect x="-1.5" y="-400" width="3000" height="2000"/></clipPath>';
     h += '<clipPath id="' + id + '-ct"><rect x="-1500" y="-400" width="3015.5" height="2000"/></clipPath>';
@@ -617,16 +644,17 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     el.insertAdjacentHTML('afterbegin', h);
 
     const svg = el.querySelector('svg');
-    const masks = $$('mask', svg);
-    const pens = (mask) => {
+    const pens = (part) => {
+      const mask = svg.querySelector('#' + id + '-m' + part);
       const letters = [];
       $$('.pen', mask).forEach((p) => {
-        const li = +p.dataset.l, si = +p.dataset.s;
+        const li = +p.dataset.l, si = +p.dataset.s, ci = +p.dataset.c;
+        const src = LOGO[part].letters[li][si][ci];
         const len = p.getTotalLength();
         p.style.strokeDasharray = len + ' ' + (len + 60);
         p.style.strokeDashoffset = len;
         p.style.visibility = 'hidden';
-        ((letters[li] = letters[li] || [])[si] = letters[li][si] || []).push({ el: p, len });
+        ((letters[li] = letters[li] || [])[si] = letters[li][si] || []).push({ el: p, len, w: src.w, pts: polyPoints(src.d) });
       });
       return { letters, full: mask.querySelector('.pen-full') };
     };
@@ -635,9 +663,9 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
       thorn: $$('.w-thorn .lt', svg),
       fullBlack: $$('.w-black .full', svg),
       fullThorn: $$('.w-thorn .full', svg),
-      knock: $$('.kc', svg),
-      the: pens(masks[0]),
-      coastal: pens(masks[1]),
+      knock: $$('.kr', svg),
+      the: pens('the'),
+      coastal: pens('coastal'),
     };
   }
 
@@ -655,82 +683,155 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     });
   }
 
-  /** handwriting at a steady hand speed (units/s); returns end time.
-      `onChunk(part, l, s, c, time)` reports when the pen starts each chunk. */
-  function scheduleScript(tl, part, t0, speed, gapStroke, gapLetter, onChunk) {
-    // One continuous hand for the whole word: every stroke and pen lift sits on a single track,
-    // so the pen never stops dead between strokes. Same total time as writing stroke by stroke.
-    // Lifts keep a brief, eased pause (expressed as "air" distance on the track).
-    const track = [];                       // { segs, from, len } for ink, { air } for lifts
-    let pos = 0, total = 0;
-    part.letters.forEach((letter, li) => {
-      letter.forEach((stroke, si) => {
-        let acc = 0;
-        const segs = stroke.map((c, ci) => { const g = { c, from: pos + acc, li, si, ci }; acc += c.len; return g; });
-        track.push({ segs, from: pos, len: acc });
-        pos += acc;
-        total += Math.max(0.06, acc / speed);
-        const lift = gapStroke + (si === letter.length - 1 ? gapLetter : 0);
-        pos += lift * speed; total += lift;          // pen in the air: covered at the same hand speed
+  /** Handwriting with a calligrapher's rhythm, fitted into `dur` seconds; returns the end time.
+      The pen is fast on hairlines and slows into the heavy downstrokes and tight turns; it lands and
+      lifts softly at both ends of every stroke and pauses briefly in the air between strokes.
+      `onChunk(li, si, ci, chunk, timeAt)` reports each chunk; timeAt(pos) gives the moment the pen
+      reaches a point on the ink track. */
+  function scheduleScript(tl, part, t0, dur, o, onChunk) {
+    const STEP = 2;                                     // sampling step along the ink, logo units
+    const smooth01 = (x) => { x = clamp01(x); return x * x * (3 - 2 * x); };
+    const T = [0], P = [0];                             // virtual time ↔ pen position on the ink track
+    let tau = 0, pos = 0;
+    const chunks = [];
+    part.letters.forEach((letter, li) => letter.forEach((stroke, si) => {
+      // per-chunk hand speed: weight (stroke width) and curvature
+      const v = stroke.map((c, ci) => {
+        const next = stroke[ci + 1], pts = next ? c.pts.concat([next.pts[1] || next.pts[0]]) : c.pts;
+        let turn = 0;
+        for (let k = 2; k < pts.length; k++) {
+          const a1 = Math.atan2(pts[k - 1][1] - pts[k - 2][1], pts[k - 1][0] - pts[k - 2][0]);
+          const a2 = Math.atan2(pts[k][1] - pts[k - 1][1], pts[k][0] - pts[k - 1][0]);
+          let da = Math.abs(a2 - a1); if (da > Math.PI) da = 2 * Math.PI - da;
+          turn += da;
+        }
+        const heavy = smooth01((c.w - 5) / 16);           // 0 hairline … 1 full downstroke
+        return (1.7 - 0.95 * heavy) / (1 + 7 * turn / Math.max(8, c.len));
       });
-    });
-    const L = pos;
-    // ease in over the first ~12 %, glide at constant speed, ease out over the last ~18 %
+      // sample the stroke, spread the speed over the neighbouring ink so it changes gradually
+      const samples = [];
+      let acc = 0;
+      stroke.forEach((c, ci) => {
+        chunks.push({ c, li, si, ci, from: pos + acc });
+        for (let d = 0; d < c.len; d += STEP) samples.push({ len: Math.min(STEP, c.len - d), v: v[ci] });
+        acc += c.len;
+      });
+      for (let pass = 0; pass < 2; pass++) {
+        const src = samples.map((s) => s.v), R = 7;
+        samples.forEach((s, k) => { let sum = 0, n = 0; for (let j = Math.max(0, k - R); j <= Math.min(samples.length - 1, k + R); j++) { sum += src[j]; n++; } s.v = sum / n; });
+      }
+      // the nib lands and lifts: slower over the first and last few units of every stroke
+      const edge = Math.min(26, acc / 3);
+      let s = 0;
+      samples.forEach((smp) => {
+        const env = 0.42 + 0.58 * smooth01(Math.min(s + smp.len / 2, acc - s - smp.len / 2) / edge);
+        tau += smp.len / (smp.v * env); pos += smp.len; s += smp.len;
+        T.push(tau); P.push(pos);
+      });
+      // pen in the air
+      tau += o.lift + (si === letter.length - 1 ? o.letterLift : 0);   // in the same units as the ink (≈ logo units at unit speed)
+      T.push(tau); P.push(pos);
+    }));
+    const total = tau;
+    // whole word: settle in and out gently
     const glide = (x) => {
-      const a = 0.12, b = 0.18, v = 1 / (1 - a / 2 - b / 2);
+      const a = 0.07, b = 0.12, vv = 1 / (1 - a / 2 - b / 2);
       if (x <= 0) return 0; if (x >= 1) return 1;
-      if (x < a) return v * x * x / (2 * a);
-      if (x > 1 - b) { const y = 1 - x; return 1 - v * y * y / (2 * b); }
-      return v * (x - a / 2);
+      if (x < a) return vv * x * x / (2 * a);
+      if (x > 1 - b) { const y = 1 - x; return 1 - vv * y * y / (2 * b); }
+      return vv * (x - a / 2);
     };
     const inv = (d) => { let lo = 0, hi = 1; for (let k = 0; k < 30; k++) { const m2 = (lo + hi) / 2; if (glide(m2) < d) lo = m2; else hi = m2; } return (lo + hi) / 2; };
-    track.forEach((tr) => tr.segs.forEach((g) => onChunk && onChunk(g.li, g.si, g.ci, t0 + total * inv(g.from / L))));
-    tl.add(t0, total, glide, (p) => {
-      const sp = p * L;
-      for (const tr of track) for (const g of tr.segs) {
+    const posAt = (tv) => {                              // virtual time → pen position
+      let lo = 0, hi = T.length - 1;
+      while (hi - lo > 1) { const m = (lo + hi) >> 1; if (T[m] <= tv) lo = m; else hi = m; }
+      const f = T[hi] > T[lo] ? clamp01((tv - T[lo]) / (T[hi] - T[lo])) : 1;
+      return P[lo] + (P[hi] - P[lo]) * f;
+    };
+    const timeAt = (p) => {                              // pen position → real time
+      let lo = 0, hi = P.length - 1;
+      while (hi - lo > 1) { const m = (lo + hi) >> 1; if (P[m] < p) lo = m; else hi = m; }
+      const f = P[hi] > P[lo] ? clamp01((p - P[lo]) / (P[hi] - P[lo])) : 0;
+      return t0 + dur * inv((T[lo] + (T[hi] - T[lo]) * f) / total);
+    };
+    if (onChunk) chunks.forEach((g) => onChunk(g.li, g.si, g.ci, g, timeAt));
+    tl.add(t0, dur, glide, (p) => {
+      const sp = posAt(p * total);
+      for (const g of chunks) {
         const drawn = Math.min(g.c.len, Math.max(0, sp - g.from));
         g.c.el.style.strokeDashoffset = g.c.len - drawn;
         g.c.el.style.visibility = drawn > 0.01 ? 'visible' : 'hidden';
       }
     });
-    const end = t0 + total;
-    tl.add(end - 0.2, 0.5, Ease.sineInOut, (p) => part.full.setAttribute('opacity', p.toFixed(3)));
+    const end = t0 + dur;
+    // the last hairline tips settle into the full letterforms
+    tl.add(end - 0.25, 0.6, Ease.sineInOut, (p) => part.full.setAttribute('opacity', p.toFixed(3)));
     return end;
   }
 
-  /** bounding box of a cut-out polygon (M/L/Z path), padded a little */
-  function knockBox(d) {
-    const n = d.match(/-?\d*\.?\d+/g).map(Number);
+  /** cut-out zone geometry: polygon, bounding box */
+  const KNOCK_GEO = LOGO.knock.map((k) => {
+    const poly = polyPoints(k.d);
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    for (let i = 0; i < n.length; i += 2) { x0 = Math.min(x0, n[i]); x1 = Math.max(x1, n[i]); y0 = Math.min(y0, n[i + 1]); y1 = Math.max(y1, n[i + 1]); }
-    x0 -= 2; y0 -= 2; x1 += 2; y1 += 2;
-    return { x0, y0, x1, y1, w: x1 - x0, h: y1 - y0, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2 };
+    poly.forEach(([x, y]) => { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); });
+    return { poly, x0, y0, x1, y1, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2 };
+  });
+  function inPoly(poly, x, y) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, yi] = poly[i], [xj, yj] = poly[j];
+      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
+  /** where the pen enters a cut-out zone: point on the chunk + its distance along the chunk */
+  function knockOrigin(g, pts) {
+    let best = null, firstIn = null, dist = 0;
+    for (let k = 0; k < pts.length; k++) {
+      if (k) dist += Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]);
+      const sub = k ? 6 : 1;
+      for (let j = 0; j < sub; j++) {           // densify the segment a little
+        const f = k ? (j + 1) / sub : 0;
+        const x = k ? pts[k - 1][0] + (pts[k][0] - pts[k - 1][0]) * f : pts[0][0];
+        const y = k ? pts[k - 1][1] + (pts[k][1] - pts[k - 1][1]) * f : pts[0][1];
+        const along = k ? dist - Math.hypot(pts[k][0] - x, pts[k][1] - y) : 0;
+        if (!firstIn && inPoly(g.poly, x, y)) firstIn = { x, y, along };
+        const dd = Math.hypot(x - g.cx, y - g.cy);
+        if (!best || dd < best.dd) best = { x, y, along, dd };
+      }
+    }
+    return firstIn || best;
   }
 
-  /** full logo sequence: words, then "The", then "Coastal"; knockouts open as the pen passes */
+  /** full logo sequence: words, then "The", then "Coastal"; the cut-outs in A, C, H and O
+      dissolve outward from the spot where the pen crosses them, carried along by the stroke */
   function scheduleLogo(tl, logo, t0, o) {
     scheduleWords(tl, logo, t0, o.wordDur, o.wordGap, o.distB, o.distT);
-    // wipe direction per letter: A top → bottom, C left → right, H (and the O next to it) bottom → top
-    const knockAt = (part) => (li, si, ci, time) => {
+    const knockEnds = { the: 0, coastal: 0 };
+    const knockEase = Ease.bezier(0.42, 0.12, 0.22, 1);   // eases off the nib, glides, settles without a lingering tail
+    const knockAt = (part) => (li, si, ci, g, timeAt) => {
       LOGO.knock.forEach((k, i) => {
         if (!(k.part === part && k.l === li && k.s === si && k.c === ci)) return;
-        const b = knockBox(k.d);
-        const dir = b.cy > 490 ? 'up' : (b.cx < 560 ? 'down' : 'right');
-        const rect = logo.knock[i];
-        tl.add(time, 0.06, Ease.expoOut, (p) => {   // near-instant wipe, 3–4 frames
-          if (dir === 'down')  { rect.setAttribute('x', b.x0); rect.setAttribute('width', b.w); rect.setAttribute('y', b.y0); rect.setAttribute('height', (b.h * p).toFixed(2)); }
-          if (dir === 'up')    { rect.setAttribute('x', b.x0); rect.setAttribute('width', b.w); rect.setAttribute('y', (b.y1 - b.h * p).toFixed(2)); rect.setAttribute('height', (b.h * p).toFixed(2)); }
-          if (dir === 'right') { rect.setAttribute('y', b.y0); rect.setAttribute('height', b.h); rect.setAttribute('x', b.x0); rect.setAttribute('width', (b.w * p).toFixed(2)); }
-        });
+        const geo = KNOCK_GEO[i];
+        const org = knockOrigin(geo, g.c.pts);
+        const reach = Math.max(...geo.poly.map(([x, y]) => Math.hypot(x - org.x, y - org.y))) + 3;
+        const R = reach / (1 - KNOCK_FEATHER);           // the soft edge has fully passed the farthest corner
+        const at = timeAt(g.from + org.along) - 0.02;    // a hair before the nib arrives: the ink reads as on top
+        const kd = (0.24 + reach * 0.0058) * o.knock;    // small crossing gaps open fast, big pieces take their time
+        const disc = logo.knock[i];
+        disc.setAttribute('cx', org.x.toFixed(2)); disc.setAttribute('cy', org.y.toFixed(2));
+        disc.setAttribute('fx', org.x.toFixed(2)); disc.setAttribute('fy', org.y.toFixed(2));
+        tl.add(at, kd, knockEase, (p) => disc.setAttribute('r', Math.max(0.01, R * p).toFixed(2)));
+        knockEnds[part] = Math.max(knockEnds[part], at + kd);
       });
     };
     const theAt = t0 + o.wordGap + o.wordDur * 0.75;
-    const theEnd = scheduleScript(tl, logo.the, theAt, o.speed, o.gapStroke, o.gapLetter, knockAt('the'));
-    // final shapes: drop the uncut letters once their script is complete
-    tl.add(theEnd - 0.1, 0.35, Ease.linear, (p) => logo.fullBlack.forEach((f) => f.setAttribute('opacity', (1 - p).toFixed(3))));
-    const end = scheduleScript(tl, logo.coastal, theEnd + 0.02, o.speed, o.gapStroke, o.gapLetter, knockAt('coastal'));
-    tl.add(end - 0.1, 0.35, Ease.linear, (p) => logo.fullThorn.forEach((f) => f.setAttribute('opacity', (1 - p).toFixed(3))));
-    return end;
+    const theEnd = scheduleScript(tl, logo.the, theAt, o.theDur, o, knockAt('the'));
+    const end = scheduleScript(tl, logo.coastal, theEnd + o.wordPause, o.coastalDur, o, knockAt('coastal'));
+    // final shapes: once every cut has fully opened, the uncut letters are no longer needed
+    tl.set(knockEnds.the + 0.02, (on) => logo.fullBlack.forEach((f) => f.setAttribute('opacity', on ? 0 : 1)));
+    tl.set(knockEnds.coastal + 0.02, (on) => logo.fullThorn.forEach((f) => f.setAttribute('opacity', on ? 0 : 1)));
+    return Math.max(end, knockEnds.coastal);
   }
 
   /* ------------------------------------------------------------------ */
@@ -821,7 +922,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
 
   tl.add(0.3, 1.6, Ease.smooth, (p) => { keyOutline.style.strokeDashoffset = kOutlineLen * (1 - p); });
 
-  scheduleLogo(tl, plLogo, 0.3, { wordDur: 0.8, wordGap: 0.22, speed: 5200, gapStroke: 0.025, gapLetter: 0.015 });
+  scheduleLogo(tl, plLogo, 0.3, { wordDur: 0.8, wordGap: 0.22, theDur: 1.0, coastalDur: 1.45, wordPause: 0.08, lift: 80, letterLift: 50, knock: 0.85 });
 
   // keyhole fills with white from the bottom
   tl.add(1.85, 0.8, Ease.smooth, (p) => { plFill.style.clipPath = 'inset(' + ((1 - p) * 100).toFixed(2) + '% 0 0 0)'; });
@@ -931,7 +1032,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   // Distances are in logo units and clear the viewport at any width (layout scales with vw):
   // BLACK's right edge sits ≈1113 design px from the left edge, THORN's left edge ≈1170 px from the right.
   $$('#heroLogo .w-black, #heroLogo .w-thorn').forEach((g) => g.removeAttribute('clip-path'));
-  const heroEnd = scheduleLogo(tl, heroLogo, T.logo, { wordDur: 1.35, wordGap: 0.22, distB: 1900, distT: 2000, speed: 3500, gapStroke: 0.035, gapLetter: 0.02 });
+  const heroEnd = scheduleLogo(tl, heroLogo, T.logo, { wordDur: 1.35, wordGap: 0.22, distB: 1900, distT: 2000, theDur: 1.25, coastalDur: 1.8, wordPause: 0.1, lift: 80, letterLift: 50, knock: 1 });
 
   tl.add(TX + 0.45, 1.3, Ease.smooth, (p) => { rings.forEach((r) => { r.style.strokeDashoffset = (ringLen * (1 - p)).toFixed(2); }); });
 
@@ -1045,6 +1146,42 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   }
   makeGrain();
 
+  /* Live grain on the slider photos. The photos carry their own static grain; a moving layer on top
+     makes it read as running film. Gaussian mono noise, one grain per photo pixel, a new frame at
+     film rate; offsets come from a hash of the frame number, so the pattern never loops. */
+  const sGrain = $('#sliderGrain');
+  const SG = { tile: 512, fps: 24, amount: 0.36, sigma: 0.16 };   // strength · noise spread (share of full range)
+  (function makeSliderGrain() {
+    const c = document.createElement('canvas'); c.width = c.height = SG.tile;
+    const x = c.getContext('2d'), img = x.createImageData(SG.tile, SG.tile), d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const g = (Math.random() + Math.random() + Math.random() + Math.random() - 2) * 0.866;   // ≈ N(0, 0.5)
+      const v = Math.max(0, Math.min(255, 128 + g * 2 * SG.sigma * 255));
+      d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255;
+    }
+    x.putImageData(img, 0, 0);
+    sGrain.style.backgroundImage = 'url(' + c.toDataURL('image/png') + ')';
+  })();
+  function sizeSliderGrain() {
+    // photos are 960 px wide and fill the slider: match the grain to their pixel size
+    // snapped to whole or half steps: a tile scaled by 0.999 would be resampled and lose its crisp grain
+    const px = Math.max(1, Math.round((slider.getBoundingClientRect().width / 960 || 1) * 2) / 2);
+    sGrain.style.backgroundSize = (SG.tile * px).toFixed(2) + 'px';
+    sGrain.dataset.px = px;
+  }
+  sizeSliderGrain();
+  let sgFrame = -1;
+  const hash = (n) => { n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); n = Math.imul(n ^ (n >>> 16), 0x45d9f3b); return (n ^ (n >>> 16)) >>> 0; };
+  function drawSliderGrain(t) {
+    sGrain.style.opacity = heroBg.style.opacity === '1' ? SG.amount : 0;
+    const f = reduceMotion ? 0 : Math.floor(Math.max(0, t) * SG.fps);
+    if (f === sgFrame) return;
+    sgFrame = f;
+    const px = +sGrain.dataset.px || 1, h = hash(f + 1);
+    const ox = Math.round((h & 0xffff) / 0xffff * SG.tile * px), oy = Math.round((h >>> 16) / 0xffff * SG.tile * px);
+    sGrain.style.transform = 'translate3d(' + (ox % 512) + 'px,' + (oy % 512) + 'px,0)';
+  }
+
   /* ------------------------------------------------------------------ */
   /* Book your stay: magnetic pull                                         */
   /* ------------------------------------------------------------------ */
@@ -1125,7 +1262,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     return keyholePath(t <= T.zoom ? 1 : zoomK(t - T.zoom));
   };
   window.addEventListener('resize', () => {
-    sizeGrain();
+    sizeGrain(); sizeSliderGrain();
     const cp = clipNow(); heroBg.style.clipPath = cp; heroUi.style.clipPath = cp;
   });
 
@@ -1133,6 +1270,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     tl.render(t);
     renderSlider(t);
     drawGrain(t);
+    drawSliderGrain(t);
   }
   window.__bt = { seek(v) { t = v; render(); }, T, get t() { return t; }, end: heroEnd };
 
