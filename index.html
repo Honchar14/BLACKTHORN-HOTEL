@@ -1149,7 +1149,51 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
 
   // flashes across the whole screen: thin streaks shoot along the lines the first screen is built on
   // (its margins, the centre line, the menu column, the logo's grid) and are gone at once
-  if (false) {                                  // replaced by comets along the letter contours
+  // flourishes across the screen: hairlines in the logo's own handwriting (the script's strokes, scattered
+  // round the edges at different sizes and angles) flash along their curve and vanish, like the comets that
+  // run ahead of The / Coastal. The centre (logo) and the ruler are left clear.
+  if (CENTER) {
+    let seed = 23;
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+    const shapes = [];
+    for (const part of ['the', 'coastal']) LOGO[part].letters.forEach((letter) => letter.forEach((stroke) => {
+      const pts = stroke.flatMap((c) => polyPoints(c.d));
+      let len = 0; for (let i = 1; i < pts.length; i++) len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+      if (len < 220) return;
+      const xs = pts.map((q) => q[0]), ys = pts.map((q) => q[1]);
+      shapes.push({ d: stroke.map((c, ci) => (ci ? c.d.replace(/^M/, 'L') : c.d)).join(''), cx: (Math.min(...xs) + Math.max(...xs)) / 2, cy: (Math.min(...ys) + Math.max(...ys)) / 2 });
+    }));
+    const clear = (x, y) => (x > 430 && x < 1490 && y > 190 && y < 890) || y > 960;   // logo box · ruler band
+    const NS = 'http://www.w3.org/2000/svg';
+    const fsvg = document.createElementNS(NS, 'svg');
+    fsvg.setAttribute('viewBox', '0 0 1920 1080');
+    fsvg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+    fsvg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;overflow:visible';
+    $('#plStreaks').appendChild(fsvg);
+    for (let at = 0.35; at < T.exit - 0.3; at += 0.04 + rnd() * 0.1) {
+      let x, y, n = 0;
+      do { x = 40 + rnd() * 1840; y = 30 + rnd() * 920; } while (clear(x, y) && ++n < 40);
+      const sh = shapes[Math.floor(rnd() * shapes.length)];
+      const sc = 0.62 * (0.7 + rnd() * 1.0), rot = (rnd() - 0.5) * 50;
+      const el = document.createElementNS(NS, 'path');
+      el.setAttribute('d', sh.d);
+      el.setAttribute('fill', 'none'); el.setAttribute('stroke', '#F0EFEB'); el.setAttribute('stroke-linecap', 'round');
+      el.setAttribute('stroke-width', (1 + rnd() * 1.1).toFixed(2)); el.setAttribute('vector-effect', 'non-scaling-stroke');
+      el.setAttribute('transform', 'translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') rotate(' + rot.toFixed(1) + ') scale(' + sc.toFixed(3) + ') translate(' + (-sh.cx).toFixed(1) + ' ' + (-sh.cy).toFixed(1) + ')');
+      el.setAttribute('visibility', 'hidden');
+      fsvg.appendChild(el);
+      const L = el.getTotalLength(), from = L * rnd() * 0.25, run = L * (0.55 + rnd() * 0.4), seg = Math.min(380, run * (0.3 + rnd() * 0.25));
+      const peak = 0.5 + rnd() * 0.45;
+      tl.add(at, 0.3 + rnd() * 0.2, COMET_EASE, (p) => {
+        const head = p * (run + seg), a = Math.max(0, head - seg), b = Math.min(run, head);
+        if (p <= 0 || p >= 1 || b - a < 0.5) { el.setAttribute('visibility', 'hidden'); return; }
+        el.setAttribute('visibility', 'visible');
+        el.style.strokeDasharray = '0 ' + (from + a).toFixed(1) + ' ' + (b - a).toFixed(1) + ' ' + (L + 400).toFixed(1);
+        el.setAttribute('opacity', (peak * Math.min(1, (1 - p) * 3.5, p * 10)).toFixed(3));
+      });
+    }
+  }
+  if (false) {                                  // (old: straight streaks along the screen grid)
     const box = $('#plStreaks');
     let seed = 7;
     const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
