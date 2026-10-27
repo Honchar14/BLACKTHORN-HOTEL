@@ -76,6 +76,21 @@ img { display: block; }
   color: var(--light);
 }
 
+/* centred variant: the preloader logo sits exactly where (and as large as) the logo of the first screen */
+.pl-logo.is-center {
+  left: 50%; top: 50%; right: auto;
+  width: calc(1174 * 0.8 * var(--u)); height: calc(738 * 0.8 * var(--u));
+  transform: translate(-50%, -50%);
+}
+/* the light hairline riding the edge of the dark curtain as it lifts */
+.pl-edge {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
+  height: max(1px, calc(1.5 * var(--u)));
+  background: var(--light);
+  opacity: 0; pointer-events: none;
+  will-change: transform, opacity;
+}
+
 .pl-counter {
   position: absolute; left: calc(30 * var(--u)); bottom: calc(30 * var(--u));
   display: flex;
@@ -344,6 +359,7 @@ img { display: block; }
 
 <!-- soft, out-of-focus edge inside the keyhole while it opens -->
 <canvas class="key-vignette" id="keyVignette" aria-hidden="true"></canvas>
+<div class="pl-edge" id="plEdge" aria-hidden="true"></div>
 
 <!-- ============ PRELOADER UI ============ -->
 <div class="pl-fill" id="plFill" aria-hidden="true"></div>
@@ -515,15 +531,25 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   /* ------------------------------------------------------------------ */
   /* Timing (seconds)                                                     */
   /* ------------------------------------------------------------------ */
-  const T = { loadStart: 3.0, loadDur: 5.0 };
-  T.exit = T.loadStart + T.loadDur;          // 8.0   preloader UI leaves, keyhole starts to grow at once
+  /* Two intros:
+     'center'  (default)  the logo is drawn in the middle of the preloader while it loads; at 100 the dark
+                          ground lifts like a curtain onto the first screen, where the logo already stands
+                          and simply turns from light to ink as the curtain edge passes over it
+     'keyhole' (?intro=keyhole)  the previous version: small logo top right, keyhole that opens onto the
+                          first screen, the logo drawn there */
+  const INTRO = qs.get('intro') === 'keyhole' ? 'keyhole' : 'center';
+  const CENTER = INTRO === 'center';
+  const T = CENTER ? { loadStart: 0.6, loadDur: 4.0 } : { loadStart: 3.0, loadDur: 5.0 };
+  T.exit = T.loadStart + T.loadDur;          // keyhole: 8.0 · center: 4.6   counter at 100, preloader UI leaves
   T.zoom = T.exit;
   T.zoomDur = 1.3;
-  T.open = T.zoom + T.zoomDur;               // 9.3   keyhole covers the screen
-  T.slide = T.zoom + 0.15;                   // photo heads left almost at once, always ahead of the keyhole edge,
-  T.slideDur = 0.65;                         // so no paper shows on the left while the keyhole opens
-  T.text = T.slide + T.slideDur - 0.05;      // 8.75 copy starts to materialise inside the opening keyhole
-  T.logo = T.text + 0.25;                    // BLACK / THORN, then the handwriting
+  T.curtain = T.exit + 0.1;                  // center: the dark ground lifts
+  T.curtainDur = 1.2;
+  T.open = CENTER ? T.curtain + T.curtainDur : T.zoom + T.zoomDur;   // first screen fully uncovered
+  T.slide = CENTER ? T.curtain + 0.05 : T.zoom + 0.15;   // photo heads left almost at once
+  T.slideDur = CENTER ? 0.9 : 0.65;
+  T.text = CENTER ? T.curtain + 0.12 : T.slide + T.slideDur - 0.05;   // copy starts to materialise
+  T.logo = T.text + 0.25;                    // keyhole: BLACK / THORN, then the handwriting
   T.slider = T.text + 0.9;                   // slideshow clock starts
 
   /* ------------------------------------------------------------------ */
@@ -648,11 +674,15 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   }
 
   // construction grid, in logo units: half-lines from the joint of K and H (x 810, y 486) outward
-  const GX = 810, GY = 486, OV = 70;
-  const GUIDES = [
+  const GX = 810, GY = 486;
+  const guidesFor = (OV = 70, OVV = 70) => [
     [231.7, -OV, 1002.6 + OV], [GY, -OV, 1513.8 + OV], [740.4, 418 - OV, 1513.8 + OV],
   ].flatMap(([y, x0, x1]) => ['M' + GX + ' ' + y + 'L' + x0 + ' ' + y, 'M' + GX + ' ' + y + 'L' + x1 + ' ' + y])
-   .concat([792.9, 826.86].flatMap((x) => ['M' + x + ' ' + GY + 'L' + x + ' ' + (231.7 - OV), 'M' + x + ' ' + GY + 'L' + x + ' ' + (740.4 + OV)]));
+   .concat([792.9, 826.86].flatMap((x) => ['M' + x + ' ' + GY + 'L' + x + ' ' + (231.7 - OVV), 'M' + x + ' ' + GY + 'L' + x + ' ' + (740.4 + OVV)]));
+  // corner marks round the whole logo (centred preloader): each opens along both arms from its corner
+  const CM = { x0: -46, y0: -40, x1: 1560, y1: 992, arm: 54 };
+  const CROP = [[CM.x0, CM.y0, 1, 1], [CM.x1, CM.y0, -1, 1], [CM.x0, CM.y1, 1, -1], [CM.x1, CM.y1, -1, -1]]
+    .flatMap(([x, y, dx, dy]) => ['M' + x + ' ' + y + 'L' + (x + dx * CM.arm) + ' ' + y, 'M' + x + ' ' + y + 'L' + x + ' ' + (y + dy * CM.arm)]);
 
   function buildLogo(el, id, opts = {}) {
     const box = 'x="-40" y="-40" width="1594" height="1032"';
@@ -705,7 +735,8 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     // construction lines: the type's own grid (cap line of BLACK, the shared line where BLACK stands on
     // THORN, baseline of THORN, and the K / H stem they lock on), each opening outward from the joint
     h += '<g class="guides" fill="none" stroke="currentColor" stroke-width="' + (olw * 0.75).toFixed(2) + '" opacity="0.55">';
-    GUIDES.forEach((g) => { h += '<path class="gd" d="' + g + '" visibility="hidden"/>'; });
+    guidesFor(opts.reachH, opts.reachV).forEach((g) => { h += '<path class="gd" d="' + g + '" visibility="hidden"/>'; });
+    if (opts.cropMarks) CROP.forEach((g) => { h += '<path class="cm" d="' + g + '" visibility="hidden"/>'; });
     h += '</g>';
     for (const part of ['the', 'coastal']) {
       h += '<g mask="url(#' + id + '-m' + part + ')">' + LOGO[part].fills.map((d) => '<path d="' + d + '"/>').join('') + '</g>';
@@ -760,6 +791,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     const mb = { y0: bb.y, y1: bb.y + bb.height };
     return {
       guides: $$('.gd', svg).map((g) => ({ el: g, len: g.getTotalLength() })),
+      crop: $$('.cm', svg).map((g) => ({ el: g, len: g.getTotalLength() })),
       mark: { outs, outline: svg.querySelector('.mark-ol'), grad: svg.querySelector('.ig'), y0: mb.y0, y1: mb.y1 },
       cuts: $$('.kc', svg),
       the: pens('the'),
@@ -786,6 +818,15 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
         if (b - a < 0.5) { g.el.setAttribute('visibility', 'hidden'); return; }
         g.el.setAttribute('visibility', 'visible');
         g.el.style.strokeDasharray = '0 ' + a.toFixed(2) + ' ' + (b - a).toFixed(2) + ' ' + (g.len + 10);
+      });
+    });
+    // corner marks open with the grid and stay, framing the mark
+    logo.crop.forEach((g, i) => {
+      tl.add(t0 + 0.1 + (i >> 1) * 0.06, 0.7, GUIDE_IN, (p) => {
+        const b = p * g.len;
+        if (b < 0.5) { g.el.setAttribute('visibility', 'hidden'); return; }
+        g.el.setAttribute('visibility', 'visible');
+        g.el.style.strokeDasharray = b.toFixed(2) + ' ' + (g.len + 10);
       });
     });
     M.outs.forEach((s) => {
@@ -925,7 +966,15 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   });
   book.setAttribute('aria-label', label);
 
-  const plLogo = buildLogo($('#plLogo'), 'pl', { outlinePx: 1, logoPx: 294 });
+  if (CENTER) {
+    $('#plLogo').classList.add('is-center');
+    $('#plKeyhole').style.display = 'none';
+    plFill.style.display = 'none';
+  }
+  // centred: the grid runs right across the screen (logo units; the screen is ~1550 units either side)
+  const plLogo = CENTER
+    ? buildLogo($('#plLogo'), 'pl', { outlinePx: 1.5, logoPx: 939.2, reachH: 1700, reachV: 900, cropMarks: true })
+    : buildLogo($('#plLogo'), 'pl', { outlinePx: 1, logoPx: 294 });
   const heroLogo = buildLogo($('#heroLogo'), 'hero', { outlinePx: 1.5, logoPx: 939.2 });
 
   const kOutlineLen = keyOutline.getTotalLength();
@@ -953,6 +1002,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     }
     return 1;
   }
+  const PROG_TOTAL = PROGRESS.reduce((a, s) => a + s.d, 0);   // the curve, stretched over T.loadDur
   const pad3 = (n) => String(n).padStart(3, '0');
   let lastCount = '';
   const directAt = (x, sy) => 'translate3d(calc(' + x.toFixed(2) + ' * var(--u)),0,0) scaleY(' + sy + ')';
@@ -974,19 +1024,22 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     tl.add(at, 0.45, Ease.power2Out, (p) => tk.el.setAttribute('opacity', (tk.base * p).toFixed(3)));
   });
 
-  tl.add(0.3, 1.6, Ease.smooth, (p) => { keyOutline.style.strokeDashoffset = kOutlineLen * (1 - p); });
+  if (!CENTER) tl.add(0.3, 1.6, Ease.smooth, (p) => { keyOutline.style.strokeDashoffset = kOutlineLen * (1 - p); });
 
-  scheduleLogo(tl, plLogo, 0.3, { guideIn: 0.5, guideOut: 0.85, guideOutDur: 0.5, drawAt: 0.12, drawDur: 0.95, innerDelay: 0.15, fillDelay: 0.38, fillDur: 0.95, scriptOverlap: 0.1, stagger: 0.045, pace: 0.72, coastalLag: 0.3, cut: 0.24, prelude: 0.28, comets: 5, cometGap: 0.055, cometDur: 0.28 });
+  const HERO_LOGO_OPTS = { guideIn: 0.6, guideOut: 1.0, guideOutDur: 0.55, drawAt: 0.15, drawDur: 1.05, innerDelay: 0.18, fillDelay: 0.42, fillDur: 1.0, scriptOverlap: 0.13, stagger: 0.055, pace: 0.95, coastalLag: 0.36, cut: 0.28, prelude: 0.34, comets: 6, cometGap: 0.065, cometDur: 0.32 };
+  // centred: the full-size drawing, with the grid given a little longer to cross the screen
+  if (CENTER) scheduleLogo(tl, plLogo, 0.5, Object.assign({}, HERO_LOGO_OPTS, { guideIn: 0.85, guideOut: 1.25, guideOutDur: 0.75 }));
+  else scheduleLogo(tl, plLogo, 0.3, { guideIn: 0.5, guideOut: 0.85, guideOutDur: 0.5, drawAt: 0.12, drawDur: 0.95, innerDelay: 0.15, fillDelay: 0.38, fillDur: 0.95, scriptOverlap: 0.1, stagger: 0.045, pace: 0.72, coastalLag: 0.3, cut: 0.24, prelude: 0.28, comets: 5, cometGap: 0.055, cometDur: 0.28 });
 
   // keyhole fills with white from the bottom
-  tl.add(1.85, 0.8, Ease.smooth, (p) => { plFill.style.clipPath = 'inset(' + ((1 - p) * 100).toFixed(2) + '% 0 0 0)'; });
-  tl.set(2.66, (on) => { heroBg.style.opacity = on ? 1 : 0; });       // photo waits under the white fill
+  if (!CENTER) tl.add(1.85, 0.8, Ease.smooth, (p) => { plFill.style.clipPath = 'inset(' + ((1 - p) * 100).toFixed(2) + '% 0 0 0)'; });
+  tl.set(CENTER ? T.exit : 2.66, (on) => { heroBg.style.opacity = on ? 1 : 0; });   // photo waits under the white fill / the curtain
   // guide line grows on the first tick
-  tl.add(2.35, 0.6, Ease.expoOut, (p) => { direct.style.transform = directAt(TICK_FIRST, p.toFixed(4)); });
+  tl.add(CENTER ? T.loadStart - 0.35 : 2.35, 0.6, Ease.expoOut, (p) => { direct.style.transform = directAt(TICK_FIRST, p.toFixed(4)); });
 
   // --- 2. Loading -----------------------------------------------------
   tl.to(T.loadStart, T.loadDur, Ease.linear, (p) => {
-    const prog = progressAt(p * T.loadDur);
+    const prog = progressAt(p * PROG_TOTAL);
     const count = pad3(Math.round(prog * 100));
     if (count !== lastCount) { digits.forEach((d, i) => { d.textContent = count[i]; }); lastCount = count; }
     const mx = TICK_FIRST + prog * (TICK_LAST - TICK_FIRST);
@@ -1001,13 +1054,26 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   // --- 3. Exit: preloader UI clears, the keyhole opens -------------------
   digits.forEach((d, i) => tl.to(T.exit + i * 0.05, 0.75, Ease.smooth, (p) => tr(d, 0, (-p * 115).toFixed(2) + '%')));
   tl.to(T.exit, 0.6, Ease.power2Out, (p) => { ruler.style.opacity = 1 - p; direct.style.opacity = 1 - p; });
-  tl.to(T.exit + 0.05, 0.7, Ease.smooth, (p) => {
+  if (!CENTER) tl.to(T.exit + 0.05, 0.7, Ease.smooth, (p) => {
     const el = $('#plLogo'); el.style.opacity = 1 - p; el.style.transform = 'translate3d(0,' + (-p * 12).toFixed(2) + 'px,0)';
   });
   tl.to(T.exit, 0.3, Ease.power2Out, (p) => { $('#plKeyhole').style.opacity = 1 - p; });
 
+  // centred: the dark ground lifts like a curtain. Below its edge the first screen (with the logo already
+  // in ink) shows, above it the preloader (with the logo in light): the logo changes colour along the edge.
+  const plEdge = $('#plEdge');
+  const CURTAIN = Ease.bezier(0.7, 0, 0.2, 1);
+  if (CENTER) tl.add(T.curtain, T.curtainDur, CURTAIN, (p) => {
+    const e = p * 100;
+    const below = p >= 1 ? 'none' : 'inset(' + (100 - e).toFixed(3) + '% 0 0 0)';
+    heroBg.style.clipPath = below; heroUi.style.clipPath = below;
+    plUi.style.clipPath = 'inset(0 0 ' + e.toFixed(3) + '% 0)';
+    plEdge.style.transform = 'translate3d(0,' + (-p * window.innerHeight).toFixed(2) + 'px,0)';
+    plEdge.style.opacity = (p > 0 && p < 1 ? Math.min(1, Math.sin(Math.PI * p) * 2.2) * 0.85 : 0).toFixed(3);
+  });
+
   // the keyhole is a window onto the whole first screen (background + UI)
-  tl.add(T.zoom, T.zoomDur, Ease.linear, (p) => {
+  if (!CENTER) tl.add(T.zoom, T.zoomDur, Ease.linear, (p) => {
     const k = zoomK(p * T.zoomDur);
     const cp = keyholePath(k);
     heroBg.style.clipPath = cp; heroUi.style.clipPath = cp;
@@ -1018,7 +1084,8 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   });
   tl.set(T.open, (on) => {
     if (on) { heroBg.style.clipPath = 'none'; heroUi.style.clipPath = 'none'; vignette.style.display = 'none'; }
-    plBg.style.display = plUi.style.display = plFill.style.display = on ? 'none' : '';
+    plBg.style.display = plUi.style.display = on ? 'none' : '';
+    if (!CENTER) plFill.style.display = on ? 'none' : '';
     document.body.classList.toggle('is-ready', on);
   });
 
@@ -1086,7 +1153,11 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   // Distances are in logo units and clear the viewport at any width (layout scales with vw):
   // BLACK's right edge sits ≈1113 design px from the left edge, THORN's left edge ≈1170 px from the right.
   $$('#heroLogo .w-black, #heroLogo .w-thorn').forEach((g) => g.removeAttribute('clip-path'));
-  const heroEnd = scheduleLogo(tl, heroLogo, T.logo, { guideIn: 0.6, guideOut: 1.0, guideOutDur: 0.55, drawAt: 0.15, drawDur: 1.05, innerDelay: 0.18, fillDelay: 0.42, fillDur: 1.0, scriptOverlap: 0.13, stagger: 0.055, pace: 0.95, coastalLag: 0.36, cut: 0.28, prelude: 0.34, comets: 6, cometGap: 0.065, cometDur: 0.32 });
+  // centred: the logo has already been drawn on the preloader, so on the first screen it simply stands
+  // finished (its animation is placed long before the clock starts)
+  const heroEnd = CENTER
+    ? (scheduleLogo(tl, heroLogo, -60, HERO_LOGO_OPTS), T.open + 1.6)
+    : scheduleLogo(tl, heroLogo, T.logo, HERO_LOGO_OPTS);
 
   tl.add(TX + 0.45, 1.3, Ease.smooth, (p) => { rings.forEach((r) => { r.style.strokeDashoffset = (ringLen * (1 - p)).toFixed(2); }); });
 
@@ -1323,6 +1394,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   };
   window.addEventListener('resize', () => {
     sizeGrain(); sizeSliderGrain();
+    if (CENTER) return;                     // the curtain is set in percentages: nothing to recompute
     const cp = clipNow(); heroBg.style.clipPath = cp; heroUi.style.clipPath = cp;
   });
 
