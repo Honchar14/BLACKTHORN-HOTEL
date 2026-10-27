@@ -593,77 +593,98 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   /*  is masked away zone by zone while the pen writes through it.        */
   /*  The / Coastal: revealed by pen strokes inside an SVG mask.          */
   /* ------------------------------------------------------------------ */
-  const KNOCK_FEATHER = 0.32;                  // soft edge of the dissolving cut-outs, share of the disc radius
-  /** points of an M/L polyline (pen paths and cut-out zones are plain polylines) */
-  function polyPoints(d) {
-    const n = d.match(/-?\d*\.?\d+/g).map(Number), pts = [];
-    for (let i = 0; i + 1 < n.length; i += 2) pts.push([n[i], n[i + 1]]);
-    return pts;
+  /* Focus pull: the script ink arrives soft (out of focus) at the nib and sharpens a moment behind it;
+     at the same time the parts of A, C, H (and the gaps in O) that the script cuts away slip out of
+     focus and fade. One gesture: what is written comes into focus, what it replaces goes out of it. */
+  const INK_SOFT = 3.4;        // blur of the soft ink at the nib, logo units
+  const CUT_BLUR = 9;          // how far the cut-away pieces blur as they leave, logo units
+
+  /** rough bounding box of a path (control points included) */
+  function pathBox(d) {
+    const n = d.match(/-?\d*\.?\d+(?:e-?\d+)?/g).map(Number);
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (let i = 0; i + 1 < n.length; i += 2) { x0 = Math.min(x0, n[i]); x1 = Math.max(x1, n[i]); y0 = Math.min(y0, n[i + 1]); y1 = Math.max(y1, n[i + 1]); }
+    return { x0, y0, x1, y1 };
   }
+  const overlap = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+  const KNOCK_BOX = LOGO.knock.map((k) => pathBox(k.d));
 
   function buildLogo(el, id) {
     const box = 'x="-40" y="-40" width="1594" height="1032"';
     let h = '<svg viewBox="0 0 1514 952" fill="currentColor" aria-hidden="true" focusable="false"><defs>';
     // feathered pen tip: the leading edge of the ink fades in over a few units instead of a hard cut
     h += '<filter id="' + id + '-feather" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="2.2"/></filter>';
-    for (const part of ['the', 'coastal']) {
-      h += '<mask id="' + id + '-m' + part + '" maskUnits="userSpaceOnUse" ' + box + '><rect ' + box + ' fill="#000"/>';
-      h += '<g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" filter="url(#' + id + '-feather)">';
+    h += '<filter id="' + id + '-bandsoft" filterUnits="userSpaceOnUse" ' + box + '><feGaussianBlur stdDeviation="7"/></filter>';
+    h += '<filter id="' + id + '-ink" filterUnits="userSpaceOnUse" ' + box + '><feGaussianBlur stdDeviation="' + INK_SOFT + '"/></filter>';
+    const penPaths = (part, cls, extra) => {
+      let o = '';
       LOGO[part].letters.forEach((letter, li) => letter.forEach((stroke, si) => stroke.forEach((c, ci) => {
-        h += '<path class="pen" data-l="' + li + '" data-s="' + si + '" data-c="' + ci + '" stroke-width="' + (c.w + 5).toFixed(1) + '" d="' + c.d + '"/>';   // +5: room for the feathered edge
+        o += '<path class="' + cls + '" data-l="' + li + '" data-s="' + si + '" data-c="' + ci + '" stroke-width="' + (c.w + extra).toFixed(1) + '" d="' + c.d + '"/>';
       })));
-      h += '</g><rect class="pen-full" ' + box + ' fill="#fff" opacity="0"/></mask>';
+      return o;
+    };
+    for (const part of ['the', 'coastal']) {
+      // sharp ink: revealed a little behind the nib
+      h += '<mask id="' + id + '-m' + part + '" maskUnits="userSpaceOnUse" ' + box + '><rect ' + box + ' fill="#000"/>';
+      h += '<g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" filter="url(#' + id + '-feather)">' + penPaths(part, 'pen', 5) + '</g>';
+      h += '<rect class="pen-full" ' + box + ' fill="#fff" opacity="0"/></mask>';
+      // soft ink: only the short stretch between the sharp ink and the nib, with soft ends
+      h += '<mask id="' + id + '-s' + part + '" maskUnits="userSpaceOnUse" ' + box + '><rect ' + box + ' fill="#000"/>';
+      h += '<g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" filter="url(#' + id + '-bandsoft)">' + penPaths(part, 'band', 16) + '</g></mask>';
     }
-    h += '<mask id="' + id + '-kn" maskUnits="userSpaceOnUse" ' + box + '><rect ' + box + ' fill="#fff"/>';
-    // each cut-out dissolves outward from the point where the pen crosses the letter: the cut is painted
-    // with its own radial gradient (black = cut, white = letter stays) whose soft-edged disc grows from the
-    // crossing and carries the cut away with it. Outside the disc the gradient pads with white, i.e. no cut.
+    // cut-away pieces: the cut-out zone, grown by a hair so the piece overlaps the cut letter (no seam)
     LOGO.knock.forEach((k, i) => {
-      h += '<path class="kn" data-i="' + i + '" d="' + k.d + '" fill="url(#' + id + '-kg' + i + ')"/>';
-    });
-    h += '</mask>';
-    LOGO.knock.forEach((k, i) => {
-      h += '<radialGradient id="' + id + '-kg' + i + '" class="kr" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="0">' +
-           '<stop offset="0" stop-color="#000"/><stop offset="' + (1 - KNOCK_FEATHER) + '" stop-color="#000"/>' +
-           '<stop offset="' + (1 - KNOCK_FEATHER * 0.45) + '" stop-color="#a6a6a6"/><stop offset="1" stop-color="#fff"/></radialGradient>';
+      h += '<mask id="' + id + '-kp' + i + '" maskUnits="userSpaceOnUse" ' + box + '><path d="' + k.d + '" fill="#fff" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></mask>';
+      h += '<filter id="' + id + '-kb' + i + '" filterUnits="userSpaceOnUse" ' + box + '><feGaussianBlur class="kb" data-i="' + i + '" stdDeviation="0"/></filter>';
     });
     // BLACK slides out from behind its left edge, THORN from behind its right edge
     h += '<clipPath id="' + id + '-cb"><rect x="-1.5" y="-400" width="3000" height="2000"/></clipPath>';
     h += '<clipPath id="' + id + '-ct"><rect x="-1500" y="-400" width="3015.5" height="2000"/></clipPath>';
     h += '</defs>';
     for (const w of ['black', 'thorn']) {
+      const part = w === 'black' ? 'the' : 'coastal';
       h += '<g class="w-' + w + '" clip-path="url(#' + id + (w === 'black' ? '-cb' : '-ct') + ')"><g>';
       LOGO[w].forEach((l) => {
-        h += '<g class="lt"><path d="' + l.cut + '"/><path class="full" mask="url(#' + id + '-kn)" d="' + l.full + '"/></g>';
+        h += '<g class="lt"><path d="' + l.cut + '"/>';
+        // each letter carries its own pieces, so they ride along with the letter's slide-in
+        const lb = pathBox(l.full);
+        LOGO.knock.forEach((k, i) => {
+          if (k.part !== part || !overlap(lb, KNOCK_BOX[i])) return;
+          h += '<g class="kp" data-i="' + i + '" filter="url(#' + id + '-kb' + i + ')"><path mask="url(#' + id + '-kp' + i + ')" d="' + l.full + '"/></g>';
+        });
+        h += '</g>';
       });
       h += '</g></g>';
     }
-    h += '<g mask="url(#' + id + '-mthe)">' + LOGO.the.fills.map((d) => '<path d="' + d + '"/>').join('') + '</g>';
-    h += '<g mask="url(#' + id + '-mcoastal)">' + LOGO.coastal.fills.map((d) => '<path d="' + d + '"/>').join('') + '</g>';
+    for (const part of ['the', 'coastal']) {
+      const fills = LOGO[part].fills.map((d) => '<path d="' + d + '"/>').join('');
+      h += '<g class="soft" mask="url(#' + id + '-s' + part + ')"><g filter="url(#' + id + '-ink)" opacity="0.5">' + fills + '</g></g>';
+      h += '<g mask="url(#' + id + '-m' + part + ')">' + fills + '</g>';
+    }
     h += '</svg>';
     el.insertAdjacentHTML('afterbegin', h);
 
     const svg = el.querySelector('svg');
     const pens = (part) => {
-      const mask = svg.querySelector('#' + id + '-m' + part);
       const letters = [];
-      $$('.pen', mask).forEach((p) => {
-        const li = +p.dataset.l, si = +p.dataset.s, ci = +p.dataset.c;
-        const src = LOGO[part].letters[li][si][ci];
+      const bands = $$('.band', svg.querySelector('#' + id + '-s' + part));
+      $$('.pen', svg.querySelector('#' + id + '-m' + part)).forEach((p, k) => {
+        const li = +p.dataset.l, si = +p.dataset.s;
         const len = p.getTotalLength();
         p.style.strokeDasharray = len + ' ' + (len + 60);
         p.style.strokeDashoffset = len;
         p.style.visibility = 'hidden';
-        ((letters[li] = letters[li] || [])[si] = letters[li][si] || []).push({ el: p, len, w: src.w, pts: polyPoints(src.d) });
+        const band = bands[k];
+        band.style.visibility = 'hidden';
+        ((letters[li] = letters[li] || [])[si] = letters[li][si] || []).push({ el: p, band, len });
       });
-      return { letters, full: mask.querySelector('.pen-full') };
+      return { letters, full: svg.querySelector('#' + id + '-m' + part + ' .pen-full') };
     };
+    const pieces = LOGO.knock.map((k, i) => ({ blur: svg.querySelector('.kb[data-i="' + i + '"]'), groups: $$('.kp[data-i="' + i + '"]', svg) }));
     return {
       black: $$('.w-black .lt', svg),
       thorn: $$('.w-thorn .lt', svg),
-      fullBlack: $$('.w-black .full', svg),
-      fullThorn: $$('.w-thorn .full', svg),
-      knock: $$('.kr', svg),
+      pieces,
       the: pens('the'),
       coastal: pens('coastal'),
     };
@@ -683,155 +704,71 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
     });
   }
 
-  /** Handwriting with a calligrapher's rhythm, fitted into `dur` seconds; returns the end time.
-      The pen is fast on hairlines and slows into the heavy downstrokes and tight turns; it lands and
-      lifts softly at both ends of every stroke and pauses briefly in the air between strokes.
-      `onChunk(li, si, ci, chunk, timeAt)` reports each chunk; timeAt(pos) gives the moment the pen
-      reaches a point on the ink track. */
-  function scheduleScript(tl, part, t0, dur, o, onChunk) {
-    const STEP = 2;                                     // sampling step along the ink, logo units
-    const smooth01 = (x) => { x = clamp01(x); return x * x * (3 - 2 * x); };
-    const T = [0], P = [0];                             // virtual time ↔ pen position on the ink track
-    let tau = 0, pos = 0;
-    const chunks = [];
+  /** Handwriting at a steady hand speed (units/s), one continuous gesture per word; returns the time
+      the ink is fully sharp. The nib leads with soft ink; sharp ink follows `lag` seconds behind.
+      `onChunk(li, si, ci, time)` reports when the nib reaches each chunk. */
+  function scheduleScript(tl, part, t0, speed, gapStroke, gapLetter, lag, onChunk) {
+    const segs = [];
+    let pos = 0, total = 0;
     part.letters.forEach((letter, li) => letter.forEach((stroke, si) => {
-      // per-chunk hand speed: weight (stroke width) and curvature
-      const v = stroke.map((c, ci) => {
-        const next = stroke[ci + 1], pts = next ? c.pts.concat([next.pts[1] || next.pts[0]]) : c.pts;
-        let turn = 0;
-        for (let k = 2; k < pts.length; k++) {
-          const a1 = Math.atan2(pts[k - 1][1] - pts[k - 2][1], pts[k - 1][0] - pts[k - 2][0]);
-          const a2 = Math.atan2(pts[k][1] - pts[k - 1][1], pts[k][0] - pts[k - 1][0]);
-          let da = Math.abs(a2 - a1); if (da > Math.PI) da = 2 * Math.PI - da;
-          turn += da;
-        }
-        const heavy = smooth01((c.w - 5) / 16);           // 0 hairline … 1 full downstroke
-        return (1.7 - 0.95 * heavy) / (1 + 7 * turn / Math.max(8, c.len));
-      });
-      // sample the stroke, spread the speed over the neighbouring ink so it changes gradually
-      const samples = [];
-      let acc = 0;
-      stroke.forEach((c, ci) => {
-        chunks.push({ c, li, si, ci, from: pos + acc });
-        for (let d = 0; d < c.len; d += STEP) samples.push({ len: Math.min(STEP, c.len - d), v: v[ci] });
-        acc += c.len;
-      });
-      for (let pass = 0; pass < 2; pass++) {
-        const src = samples.map((s) => s.v), R = 7;
-        samples.forEach((s, k) => { let sum = 0, n = 0; for (let j = Math.max(0, k - R); j <= Math.min(samples.length - 1, k + R); j++) { sum += src[j]; n++; } s.v = sum / n; });
-      }
-      // the nib lands and lifts: slower over the first and last few units of every stroke
-      const edge = Math.min(26, acc / 3);
-      let s = 0;
-      samples.forEach((smp) => {
-        const env = 0.42 + 0.58 * smooth01(Math.min(s + smp.len / 2, acc - s - smp.len / 2) / edge);
-        tau += smp.len / (smp.v * env); pos += smp.len; s += smp.len;
-        T.push(tau); P.push(pos);
-      });
-      // pen in the air
-      tau += o.lift + (si === letter.length - 1 ? o.letterLift : 0);   // in the same units as the ink (≈ logo units at unit speed)
-      T.push(tau); P.push(pos);
+      stroke.forEach((c, ci) => { segs.push({ c, from: pos, li, si, ci }); pos += c.len; });
+      total += Math.max(0.06, stroke.reduce((a, c) => a + c.len, 0) / speed);
+      const lift = gapStroke + (si === letter.length - 1 ? gapLetter : 0);
+      pos += lift * speed; total += lift;                // pen in the air: covered at the same hand speed
     }));
-    const total = tau;
-    // whole word: settle in and out gently
+    const lagD = lag * speed;
+    const L = pos + lagD, dur = total + lag;             // the nib runs on until the sharp ink has caught up
+    // ease in over the first ~12 %, glide at constant speed, ease out over the last ~18 %
     const glide = (x) => {
-      const a = 0.07, b = 0.12, vv = 1 / (1 - a / 2 - b / 2);
+      const a = 0.12, b = 0.18, v = 1 / (1 - a / 2 - b / 2);
       if (x <= 0) return 0; if (x >= 1) return 1;
-      if (x < a) return vv * x * x / (2 * a);
-      if (x > 1 - b) { const y = 1 - x; return 1 - vv * y * y / (2 * b); }
-      return vv * (x - a / 2);
+      if (x < a) return v * x * x / (2 * a);
+      if (x > 1 - b) { const y = 1 - x; return 1 - v * y * y / (2 * b); }
+      return v * (x - a / 2);
     };
     const inv = (d) => { let lo = 0, hi = 1; for (let k = 0; k < 30; k++) { const m2 = (lo + hi) / 2; if (glide(m2) < d) lo = m2; else hi = m2; } return (lo + hi) / 2; };
-    const posAt = (tv) => {                              // virtual time → pen position
-      let lo = 0, hi = T.length - 1;
-      while (hi - lo > 1) { const m = (lo + hi) >> 1; if (T[m] <= tv) lo = m; else hi = m; }
-      const f = T[hi] > T[lo] ? clamp01((tv - T[lo]) / (T[hi] - T[lo])) : 1;
-      return P[lo] + (P[hi] - P[lo]) * f;
-    };
-    const timeAt = (p) => {                              // pen position → real time
-      let lo = 0, hi = P.length - 1;
-      while (hi - lo > 1) { const m = (lo + hi) >> 1; if (P[m] < p) lo = m; else hi = m; }
-      const f = P[hi] > P[lo] ? clamp01((p - P[lo]) / (P[hi] - P[lo])) : 0;
-      return t0 + dur * inv((T[lo] + (T[hi] - T[lo]) * f) / total);
-    };
-    if (onChunk) chunks.forEach((g) => onChunk(g.li, g.si, g.ci, g, timeAt));
+    if (onChunk) segs.forEach((g) => onChunk(g.li, g.si, g.ci, t0 + dur * inv(g.from / L)));
     tl.add(t0, dur, glide, (p) => {
-      const sp = posAt(p * total);
-      for (const g of chunks) {
-        const drawn = Math.min(g.c.len, Math.max(0, sp - g.from));
-        g.c.el.style.strokeDashoffset = g.c.len - drawn;
+      const nib = p * L, sharp = nib - lagD;
+      for (const g of segs) {
+        const len = g.c.len;
+        const drawn = Math.min(len, Math.max(0, sharp - g.from));
+        g.c.el.style.strokeDashoffset = len - drawn;
         g.c.el.style.visibility = drawn > 0.01 ? 'visible' : 'hidden';
+        // soft band: from the sharp ink up to the nib
+        const a = drawn, b = Math.min(len, Math.max(0, nib - g.from));
+        if (b - a > 0.01) {
+          g.c.band.style.strokeDasharray = '0 ' + a.toFixed(2) + ' ' + (b - a).toFixed(2) + ' ' + (len + 60);
+          g.c.band.style.visibility = 'visible';
+        } else g.c.band.style.visibility = 'hidden';
       }
     });
     const end = t0 + dur;
-    // the last hairline tips settle into the full letterforms
-    tl.add(end - 0.25, 0.6, Ease.sineInOut, (p) => part.full.setAttribute('opacity', p.toFixed(3)));
+    tl.add(end - 0.2, 0.5, Ease.sineInOut, (p) => part.full.setAttribute('opacity', p.toFixed(3)));
     return end;
   }
 
-  /** cut-out zone geometry: polygon, bounding box */
-  const KNOCK_GEO = LOGO.knock.map((k) => {
-    const poly = polyPoints(k.d);
-    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    poly.forEach(([x, y]) => { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); });
-    return { poly, x0, y0, x1, y1, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2 };
-  });
-  function inPoly(poly, x, y) {
-    let inside = false;
-    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-      const [xi, yi] = poly[i], [xj, yj] = poly[j];
-      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
-    }
-    return inside;
-  }
-  /** where the pen enters a cut-out zone: point on the chunk + its distance along the chunk */
-  function knockOrigin(g, pts) {
-    let best = null, firstIn = null, dist = 0;
-    for (let k = 0; k < pts.length; k++) {
-      if (k) dist += Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]);
-      const sub = k ? 6 : 1;
-      for (let j = 0; j < sub; j++) {           // densify the segment a little
-        const f = k ? (j + 1) / sub : 0;
-        const x = k ? pts[k - 1][0] + (pts[k][0] - pts[k - 1][0]) * f : pts[0][0];
-        const y = k ? pts[k - 1][1] + (pts[k][1] - pts[k - 1][1]) * f : pts[0][1];
-        const along = k ? dist - Math.hypot(pts[k][0] - x, pts[k][1] - y) : 0;
-        if (!firstIn && inPoly(g.poly, x, y)) firstIn = { x, y, along };
-        const dd = Math.hypot(x - g.cx, y - g.cy);
-        if (!best || dd < best.dd) best = { x, y, along, dd };
-      }
-    }
-    return firstIn || best;
-  }
-
-  /** full logo sequence: words, then "The", then "Coastal"; the cut-outs in A, C, H and O
-      dissolve outward from the spot where the pen crosses them, carried along by the stroke */
+  /** full logo sequence: words, then "The", then "Coastal" */
   function scheduleLogo(tl, logo, t0, o) {
     scheduleWords(tl, logo, t0, o.wordDur, o.wordGap, o.distB, o.distT);
-    const knockEnds = { the: 0, coastal: 0 };
-    const knockEase = Ease.bezier(0.42, 0.12, 0.22, 1);   // eases off the nib, glides, settles without a lingering tail
-    const knockAt = (part) => (li, si, ci, g, timeAt) => {
+    let last = 0;
+    // a cut-away piece starts to leave as the soft ink reaches it, and is gone as the ink sharpens
+    const knockAt = (part) => (li, si, ci, time) => {
       LOGO.knock.forEach((k, i) => {
         if (!(k.part === part && k.l === li && k.s === si && k.c === ci)) return;
-        const geo = KNOCK_GEO[i];
-        const org = knockOrigin(geo, g.c.pts);
-        const reach = Math.max(...geo.poly.map(([x, y]) => Math.hypot(x - org.x, y - org.y))) + 3;
-        const R = reach / (1 - KNOCK_FEATHER);           // the soft edge has fully passed the farthest corner
-        const at = timeAt(g.from + org.along) - 0.02;    // a hair before the nib arrives: the ink reads as on top
-        const kd = (0.24 + reach * 0.0058) * o.knock;    // small crossing gaps open fast, big pieces take their time
-        const disc = logo.knock[i];
-        disc.setAttribute('cx', org.x.toFixed(2)); disc.setAttribute('cy', org.y.toFixed(2));
-        disc.setAttribute('fx', org.x.toFixed(2)); disc.setAttribute('fy', org.y.toFixed(2));
-        tl.add(at, kd, knockEase, (p) => disc.setAttribute('r', Math.max(0.01, R * p).toFixed(2)));
-        knockEnds[part] = Math.max(knockEnds[part], at + kd);
+        const pc = logo.pieces[i], dur = o.lag + o.cutDur;
+        tl.add(time, dur, Ease.linear, (p) => {
+          pc.blur.setAttribute('stdDeviation', (CUT_BLUR * Ease.power2Out(p)).toFixed(2));
+          const op = Math.pow(1 - Ease.power2Out(p), 1.4).toFixed(3);   // fades a touch faster than it blurs: a haze, not a smudge
+          pc.groups.forEach((g) => { g.setAttribute('opacity', op); g.style.visibility = p >= 1 ? 'hidden' : ''; });
+        });
+        last = Math.max(last, time + dur);
       });
     };
     const theAt = t0 + o.wordGap + o.wordDur * 0.75;
-    const theEnd = scheduleScript(tl, logo.the, theAt, o.theDur, o, knockAt('the'));
-    const end = scheduleScript(tl, logo.coastal, theEnd + o.wordPause, o.coastalDur, o, knockAt('coastal'));
-    // final shapes: once every cut has fully opened, the uncut letters are no longer needed
-    tl.set(knockEnds.the + 0.02, (on) => logo.fullBlack.forEach((f) => f.setAttribute('opacity', on ? 0 : 1)));
-    tl.set(knockEnds.coastal + 0.02, (on) => logo.fullThorn.forEach((f) => f.setAttribute('opacity', on ? 0 : 1)));
-    return Math.max(end, knockEnds.coastal);
+    const theEnd = scheduleScript(tl, logo.the, theAt, o.speed, o.gapStroke, o.gapLetter, o.lag, knockAt('the'));
+    const end = scheduleScript(tl, logo.coastal, theEnd - o.lag + 0.04, o.speed, o.gapStroke, o.gapLetter, o.lag, knockAt('coastal'));
+    return Math.max(end, last);
   }
 
   /* ------------------------------------------------------------------ */
@@ -922,7 +859,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
 
   tl.add(0.3, 1.6, Ease.smooth, (p) => { keyOutline.style.strokeDashoffset = kOutlineLen * (1 - p); });
 
-  scheduleLogo(tl, plLogo, 0.3, { wordDur: 0.8, wordGap: 0.22, theDur: 1.0, coastalDur: 1.45, wordPause: 0.08, lift: 80, letterLift: 50, knock: 0.85 });
+  scheduleLogo(tl, plLogo, 0.3, { wordDur: 0.8, wordGap: 0.22, speed: 4800, gapStroke: 0.03, gapLetter: 0.015, lag: 0.09, cutDur: 0.4 });
 
   // keyhole fills with white from the bottom
   tl.add(1.85, 0.8, Ease.smooth, (p) => { plFill.style.clipPath = 'inset(' + ((1 - p) * 100).toFixed(2) + '% 0 0 0)'; });
@@ -1032,7 +969,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
   // Distances are in logo units and clear the viewport at any width (layout scales with vw):
   // BLACK's right edge sits ≈1113 design px from the left edge, THORN's left edge ≈1170 px from the right.
   $$('#heroLogo .w-black, #heroLogo .w-thorn').forEach((g) => g.removeAttribute('clip-path'));
-  const heroEnd = scheduleLogo(tl, heroLogo, T.logo, { wordDur: 1.35, wordGap: 0.22, distB: 1900, distT: 2000, theDur: 1.25, coastalDur: 1.8, wordPause: 0.1, lift: 80, letterLift: 50, knock: 1 });
+  const heroEnd = scheduleLogo(tl, heroLogo, T.logo, { wordDur: 1.35, wordGap: 0.22, distB: 1900, distT: 2000, speed: 3100, gapStroke: 0.04, gapLetter: 0.02, lag: 0.11, cutDur: 0.45 });
 
   tl.add(TX + 0.45, 1.3, Ease.smooth, (p) => { rings.forEach((r) => { r.style.strokeDashoffset = (ringLen * (1 - p)).toFixed(2); }); });
 
@@ -1150,7 +1087,7 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
      makes it read as running film. Gaussian mono noise, one grain per photo pixel, a new frame at
      film rate; offsets come from a hash of the frame number, so the pattern never loops. */
   const sGrain = $('#sliderGrain');
-  const SG = { tile: 512, fps: 24, amount: 0.36, sigma: 0.16 };   // strength · noise spread (share of full range)
+  const SG = { tile: 512, fps: 18, amount: 0.22, sigma: 0.15, soft: 0.45 };   // strength · noise spread · grain softness (px)
   (function makeSliderGrain() {
     const c = document.createElement('canvas'); c.width = c.height = SG.tile;
     const x = c.getContext('2d'), img = x.createImageData(SG.tile, SG.tile), d = img.data;
@@ -1160,7 +1097,13 @@ window.BT_LOGO ={"vb":[1514,952],"black":[{"cut":"M110.26 231.66C140.32 231.66 1
       d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255;
     }
     x.putImageData(img, 0, 0);
-    sGrain.style.backgroundImage = 'url(' + c.toDataURL('image/png') + ')';
+    // round the grains off a little: soft, velvety grain instead of sharp pixel noise.
+    // Drawn 3×3 so the blur wraps around the tile edges and the tile stays seamless.
+    const out = document.createElement('canvas'); out.width = out.height = SG.tile;
+    const o = out.getContext('2d');
+    o.filter = 'blur(' + SG.soft + 'px)';
+    for (let ty = -1; ty <= 1; ty++) for (let tx = -1; tx <= 1; tx++) o.drawImage(c, tx * SG.tile, ty * SG.tile);
+    sGrain.style.backgroundImage = 'url(' + out.toDataURL('image/png') + ')';
   })();
   function sizeSliderGrain() {
     // photos are 960 px wide and fill the slider: match the grain to their pixel size
